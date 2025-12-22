@@ -21,6 +21,7 @@ class QuranApp : Application() {
         // Initialize database
         CoroutineScope(Dispatchers.IO).launch {
             val initializer = DatabaseInitializer(
+                applicationContext,
                 database.surahDao(),
                 database.ayahDao()
             )

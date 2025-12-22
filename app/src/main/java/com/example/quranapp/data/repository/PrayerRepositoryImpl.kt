@@ -5,9 +5,13 @@ import com.example.quranapp.domain.model.PrayerTimes
 import com.example.quranapp.domain.repository.PrayerRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
 import javax.inject.Inject
 
 class PrayerRepositoryImpl @Inject constructor() : PrayerRepository {
+    private val client = OkHttpClient()
     
     override suspend fun getPrayerTimes(
         latitude: Double,
@@ -16,16 +20,42 @@ class PrayerRepositoryImpl @Inject constructor() : PrayerRepository {
         month: Int,
         year: Int
     ): PrayerTimes {
-        // This would call an API like Aladhan API
-        // For now, return placeholder
-        return PrayerTimes(
-            location = "Unknown",
-            latitude = latitude,
-            longitude = longitude,
-            timezone = "UTC",
-            method = method,
-            times = emptyList()
-        )
+        return try {
+            val url = "https://api.aladhan.com/v1/calendar?latitude=$latitude&longitude=$longitude&method=$method&month=$month&year=$year"
+            val req = Request.Builder().url(url).build()
+            client.newCall(req).execute().use { resp ->
+                val body = resp.body?.string() ?: ""
+                val root = JSONObject(body)
+                val data = root.getJSONArray("data")
+                val list = mutableListOf<PrayerTime>()
+                for (i in 0 until data.length()) {
+                    val item = data.getJSONObject(i)
+                    val date = item.getJSONObject("date").getString("readable")
+                    val t = item.getJSONObject("timings")
+                    list.add(
+                        PrayerTime(
+                            date = date,
+                            fajr = t.getString("Fajr"),
+                            sunrise = t.getString("Sunrise"),
+                            dhuhr = t.getString("Dhuhr"),
+                            asr = t.getString("Asr"),
+                            maghrib = t.getString("Maghrib"),
+                            isha = t.getString("Isha")
+                        )
+                    )
+                }
+                PrayerTimes(
+                    location = "",
+                    latitude = latitude,
+                    longitude = longitude,
+                    timezone = "",
+                    method = method,
+                    times = list
+                )
+            }
+        } catch (e: Exception) {
+            PrayerTimes("", latitude, longitude, "", method, emptyList())
+        }
     }
     
     override suspend fun getTodayPrayerTime(
@@ -33,17 +63,28 @@ class PrayerRepositoryImpl @Inject constructor() : PrayerRepository {
         longitude: Double,
         method: Int
     ): PrayerTime {
-        // This would call an API
-        // For now, return placeholder
-        return PrayerTime(
-            date = "",
-            fajr = "05:00",
-            sunrise = "06:00",
-            dhuhr = "12:00",
-            asr = "15:00",
-            maghrib = "18:00",
-            isha = "19:00"
-        )
+        return try {
+            val url = "https://api.aladhan.com/v1/timings?latitude=$latitude&longitude=$longitude&method=$method"
+            val req = Request.Builder().url(url).build()
+            client.newCall(req).execute().use { resp ->
+                val body = resp.body?.string() ?: ""
+                val root = JSONObject(body)
+                val data = root.getJSONObject("data")
+                val date = data.getJSONObject("date").getString("readable")
+                val t = data.getJSONObject("timings")
+                PrayerTime(
+                    date = date,
+                    fajr = t.getString("Fajr"),
+                    sunrise = t.getString("Sunrise"),
+                    dhuhr = t.getString("Dhuhr"),
+                    asr = t.getString("Asr"),
+                    maghrib = t.getString("Maghrib"),
+                    isha = t.getString("Isha")
+                )
+            }
+        } catch (e: Exception) {
+            PrayerTime("", "--:--", "--:--", "--:--", "--:--", "--:--", "--:--")
+        }
     }
     
     override suspend fun getQiblaDirection(latitude: Double, longitude: Double): Double {
@@ -76,4 +117,3 @@ class PrayerRepositoryImpl @Inject constructor() : PrayerRepository {
         )
     }
 }
-

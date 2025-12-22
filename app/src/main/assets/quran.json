@@ -1,0 +1,25 @@
+[
+  {
+    "number": 1,
+    "name": "Al-Fatiha",
+    "nameArabic": "الفاتحة",
+    "nameEnglish": "Al-Fatiha",
+    "englishNameTranslation": "The Opening",
+    "revelationType": "Meccan",
+    "numberOfAyahs": 7,
+    "ayahs": [
+      {
+        "number": 1,
+        "numberInSurah": 1,
+        "text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+        "textUthmani": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+        "juz": 1,
+        "hizb": 1,
+        "manzil": 1,
+        "ruku": 1,
+        "page": 1,
+        "sajda": false
+      }
+    ]
+  }
+]

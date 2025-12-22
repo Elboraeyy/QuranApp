@@ -45,6 +45,7 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0")
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
@@ -55,6 +56,8 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation("androidx.compose.foundation:foundation")
     implementation("com.google.android.exoplayer:exoplayer:2.19.1")
+    implementation("com.google.android.gms:play-services-location:21.2.0")
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
     
     // Room
     implementation(libs.androidx.room.runtime)

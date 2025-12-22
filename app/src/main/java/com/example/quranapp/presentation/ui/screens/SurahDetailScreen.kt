@@ -51,7 +51,7 @@ fun SurahDetailScreen(
                             contentDescription = "Bookmark"
                         )
                     }
-                    IconButton(onClick = { /* Play audio */ }) {
+                    IconButton(onClick = { navController.navigate("audio") }) {
                         Icon(Icons.Default.PlayArrow, contentDescription = "Play")
                     }
                 }
@@ -83,8 +83,8 @@ fun SurahDetailScreen(
 
             when (selectedTab) {
                 0 -> AyahList(ayahs = ayahs, onAyahClick = { /* Handle click */ })
-                1 -> TranslationView(ayahs = ayahs)
-                2 -> TafsirView(ayahs = ayahs)
+                1 -> TranslationView(ayahs = ayahs, translations = viewModel.translationTexts.collectAsState().value)
+                2 -> TafsirView(ayahs = ayahs, tafsir = viewModel.tafsirTexts.collectAsState().value)
             }
         }
     }
@@ -159,7 +159,7 @@ fun AyahItem(
 }
 
 @Composable
-fun TranslationView(ayahs: List<com.example.quranapp.domain.model.Ayah>) {
+fun TranslationView(ayahs: List<com.example.quranapp.domain.model.Ayah>, translations: List<com.example.quranapp.domain.model.TranslationText>) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -178,10 +178,8 @@ fun TranslationView(ayahs: List<com.example.quranapp.domain.model.Ayah>) {
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Translation text here...",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    val text = translations.find { it.ayahNumber == ayah.numberInSurah }?.text ?: ""
+                    Text(text = text, style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
@@ -189,7 +187,7 @@ fun TranslationView(ayahs: List<com.example.quranapp.domain.model.Ayah>) {
 }
 
 @Composable
-fun TafsirView(ayahs: List<com.example.quranapp.domain.model.Ayah>) {
+fun TafsirView(ayahs: List<com.example.quranapp.domain.model.Ayah>, tafsir: List<com.example.quranapp.domain.model.TafsirText>) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -208,10 +206,8 @@ fun TafsirView(ayahs: List<com.example.quranapp.domain.model.Ayah>) {
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Tafsir text here...",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    val text = tafsir.find { it.ayahNumber == ayah.numberInSurah }?.text ?: ""
+                    Text(text = text, style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }

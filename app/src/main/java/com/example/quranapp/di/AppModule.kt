@@ -127,14 +127,14 @@ object AppModule {
     
     @Provides
     @Singleton
-    fun provideTafsirRepository(): TafsirRepository {
-        return TafsirRepositoryImpl()
+    fun provideTafsirRepository(@ApplicationContext context: Context): TafsirRepository {
+        return TafsirRepositoryImpl(context)
     }
     
     @Provides
     @Singleton
-    fun provideTranslationRepository(): TranslationRepository {
-        return TranslationRepositoryImpl()
+    fun provideTranslationRepository(@ApplicationContext context: Context): TranslationRepository {
+        return TranslationRepositoryImpl(context)
     }
     
     @Provides

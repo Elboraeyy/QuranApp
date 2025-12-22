@@ -10,7 +10,7 @@ class AudioRepositoryImpl @Inject constructor() : AudioRepository {
         Reciter("abdul_basit", "Abdul Basit", "عبد الباسط عبد الصمد", "https://server7.mp3quran.net/abd_basit/", "Hafs"),
         Reciter("al_hudhaifi", "Al-Hudhaifi", "صالح الهذيفي", "https://server7.mp3quran.net/hud/", "Hafs"),
         Reciter("al_minshawi", "Al-Minshawi", "محمد صديق المنشاوي", "https://server7.mp3quran.net/minsh/", "Hafs"),
-        Reciter("mishary_alfasy", "Mishary Alafasy", "مشاري العفاسي", "https://server7.mp3quran.net/maher/", "Hafs"),
+        Reciter("mishary_alfasy", "Mishary Alafasy", "مشاري العفاسي", "https://server8.mp3quran.net/afs/", "Hafs"),
         Reciter("saad_al_ghamdi", "Saad Al-Ghamdi", "سعد الغامدي", "https://server7.mp3quran.net/s_gmd/", "Hafs")
     )
 

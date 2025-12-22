@@ -3,6 +3,9 @@ package com.example.quranapp.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.quranapp.domain.repository.QuranRepository
+import com.example.quranapp.domain.repository.SettingsRepository
+import com.example.quranapp.domain.repository.TranslationRepository
+import com.example.quranapp.domain.repository.TafsirRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +15,10 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SurahDetailViewModel @Inject constructor(
-    private val quranRepository: QuranRepository
+    private val quranRepository: QuranRepository,
+    private val settingsRepository: SettingsRepository,
+    private val translationRepository: TranslationRepository,
+    private val tafsirRepository: TafsirRepository
 ) : ViewModel() {
 
     private val _surah = MutableStateFlow<com.example.quranapp.domain.model.Surah?>(null)
@@ -26,10 +32,23 @@ class SurahDetailViewModel @Inject constructor(
 
     var isBookmarked = false
 
+    private val _translationTexts = MutableStateFlow<List<com.example.quranapp.domain.model.TranslationText>>(emptyList())
+    val translationTexts: StateFlow<List<com.example.quranapp.domain.model.TranslationText>> = _translationTexts.asStateFlow()
+
+    private val _tafsirTexts = MutableStateFlow<List<com.example.quranapp.domain.model.TafsirText>>(emptyList())
+    val tafsirTexts: StateFlow<List<com.example.quranapp.domain.model.TafsirText>> = _tafsirTexts.asStateFlow()
+
     fun loadSurah(surahNumber: Int) {
         viewModelScope.launch {
             _surah.value = quranRepository.getSurahByNumber(surahNumber)
             _ayahs.value = quranRepository.getAyahsBySurah(surahNumber)
+            val settings = settingsRepository.getSettings()
+            settings.selectedTranslation?.let {
+                _translationTexts.value = translationRepository.getTranslationTextsBySurah(surahNumber, it)
+            }
+            settings.selectedTafsir?.let {
+                _tafsirTexts.value = tafsirRepository.getTafsirTextsBySurah(surahNumber, it)
+            }
         }
     }
 
