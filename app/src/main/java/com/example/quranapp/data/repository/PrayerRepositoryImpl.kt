@@ -5,9 +5,12 @@ import com.example.quranapp.domain.model.PrayerTimes
 import com.example.quranapp.domain.repository.PrayerRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import com.example.quranapp.data.remote.api.PrayerApi
 import javax.inject.Inject
 
-class PrayerRepositoryImpl @Inject constructor() : PrayerRepository {
+class PrayerRepositoryImpl @Inject constructor(
+    private val prayerApi: PrayerApi
+) : PrayerRepository {
     
     override suspend fun getPrayerTimes(
         latitude: Double,

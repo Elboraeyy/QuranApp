@@ -12,23 +12,65 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.MutableState
+
+enum class ThemeMode {
+    LIGHT, DARK, SYSTEM
+}
+
+val LocalThemeMode = compositionLocalOf<MutableState<ThemeMode>> { error("No ThemeMode provided") }
 
 private val LightColors = lightColorScheme(
-    primary = PrimaryGreen,
-    background = BackgroundLight,
-    surface = SurfaceLight,
+    primary = GreenPrimaryLight,
     onPrimary = Color.White,
+    primaryContainer = Color(0xFFE6F3EB), // Very light green
+    onPrimaryContainer = Color(0xFF01361B),
+    
+    secondary = GoldSecondaryLight,
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFFDF8EE), // Very light gold
+    onSecondaryContainer = Color(0xFF5A4412),
+    
+    tertiary = GreenPrimaryLight,
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFE6F3EB),
+    onTertiaryContainer = Color(0xFF01361B),
+    
+    background = BackgroundLight,
     onBackground = TextPrimaryLight,
+    surface = SurfaceLight,
     onSurface = TextPrimaryLight,
+    
+    surfaceVariant = Color(0xFFE7E9E6),
+    onSurfaceVariant = Color(0xFF444744),
+    outline = Color(0xFF747975)
 )
 
 private val DarkColors = darkColorScheme(
-    primary = PrimaryGreenLight,
-    background = BackgroundDark,
-    surface = SurfaceDark,
+    primary = GreenPrimaryDark,
     onPrimary = Color.Black,
+    primaryContainer = Color(0xFF015228),
+    onPrimaryContainer = Color(0xFF8FF5BA),
+    
+    secondary = GoldSecondaryDark,
+    onSecondary = Color.Black,
+    secondaryContainer = Color(0xFF5A4412),
+    onSecondaryContainer = Color(0xFFFFDEA3),
+    
+    tertiary = GreenPrimaryDark,
+    onTertiary = Color.Black,
+    tertiaryContainer = Color(0xFF015228),
+    onTertiaryContainer = Color(0xFF8FF5BA),
+
+    background = BackgroundDark,
     onBackground = TextPrimaryDark,
+    surface = SurfaceDark,
     onSurface = TextPrimaryDark,
+    
+    surfaceVariant = Color(0xFF444744),
+    onSurfaceVariant = Color(0xFFC4C7C3),
+    outline = Color(0xFF8E928E)
 )
 
 @Composable
@@ -47,9 +89,17 @@ fun QuranAppTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colors,
-        typography = QuranTypography,
-        content = content
-    )
+    androidx.compose.runtime.CompositionLocalProvider(
+        LocalSpacing provides Spacing()
+    ) {
+        MaterialTheme(
+            colorScheme = colors,
+            typography = QuranTypography,
+            content = content
+        )
+    }
 }
+
+val MaterialTheme.spacing: Spacing
+    @Composable
+    get() = LocalSpacing.current

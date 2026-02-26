@@ -77,6 +77,60 @@ fun SetupNavGraph(navController: NavHostController) {
         composable(Screen.About.route) {
             AboutScreen(navController = navController)
         }
+        composable(Screen.Login.route) {
+            LoginScreen(navController = navController)
+        }
+        composable(Screen.TafsirMenu.route) {
+            TafsirMenuScreen(navController = navController)
+        }
+        composable(Screen.TafsirSurahList.route) {
+            TafsirSurahListScreen(navController = navController)
+        }
+        composable(Screen.AdhkarList.route) {
+            AdhkarListScreen(navController = navController)
+        }
+        composable(
+            route = Screen.AdhkarDetail.route,
+            arguments = listOf(
+                navArgument("categoryId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val categoryId = backStackEntry.arguments?.getInt("categoryId") ?: 1
+            AdhkarDetailScreen(
+                navController = navController,
+                categoryId = categoryId
+            )
+        }
+        composable(Screen.Tasbih.route) {
+            TasbihScreen(navController = navController)
+        }
+        composable(
+            route = Screen.TafsirDetail.route,
+            arguments = listOf(
+                navArgument("surahName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val surahName = backStackEntry.arguments?.getString("surahName") ?: "سُورَةُ الْفَاتِحَةِ"
+            TafsirDetailScreen(
+                navController = navController,
+                surahName = surahName
+            )
+        }
+        composable(Screen.QuranIndex.route) {
+            QuranIndexScreen(navController = navController)
+        }
+        composable(
+            route = Screen.QuranReading.route,
+            arguments = listOf(
+                navArgument("surahId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val surahId = backStackEntry.arguments?.getInt("surahId") ?: 2
+            QuranReadingScreen(
+                navController = navController,
+                surahId = surahId
+            )
+        }
     }
 }
 

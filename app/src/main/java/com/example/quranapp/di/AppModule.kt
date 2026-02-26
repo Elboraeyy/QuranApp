@@ -33,6 +33,10 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import com.example.quranapp.data.remote.api.QuranApi
+import com.example.quranapp.data.remote.api.PrayerApi
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -82,9 +86,10 @@ object AppModule {
     @Singleton
     fun provideQuranRepository(
         surahDao: SurahDao,
-        ayahDao: AyahDao
+        ayahDao: AyahDao,
+        quranApi: QuranApi
     ): QuranRepository {
-        return QuranRepositoryImpl(surahDao, ayahDao)
+        return QuranRepositoryImpl(surahDao, ayahDao, quranApi)
     }
     
     @Provides
@@ -139,8 +144,28 @@ object AppModule {
     
     @Provides
     @Singleton
-    fun providePrayerRepository(): PrayerRepository {
-        return PrayerRepositoryImpl()
+    fun providePrayerRepository(prayerApi: PrayerApi): PrayerRepository {
+        return PrayerRepositoryImpl(prayerApi)
+    }
+
+    @Provides
+    @Singleton
+    fun provideQuranApi(): QuranApi {
+        return Retrofit.Builder()
+            .baseUrl("https://api.alquran.cloud/v1/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(QuranApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun providePrayerApi(): PrayerApi {
+        return Retrofit.Builder()
+            .baseUrl("https://api.aladhan.com/v1/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(PrayerApi::class.java)
     }
 }
 

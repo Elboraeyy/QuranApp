@@ -17,14 +17,15 @@ class QuranApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        
-        // Initialize database
+        initializeDatabase()
+    }
+
+    private fun initializeDatabase() {
         CoroutineScope(Dispatchers.IO).launch {
-            val initializer = DatabaseInitializer(
+            DatabaseInitializer(
                 database.surahDao(),
                 database.ayahDao()
-            )
-            initializer.initializeDatabase()
+            ).initializeDatabase()
         }
     }
 }

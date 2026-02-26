@@ -75,6 +75,20 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
     
+    // Image Loading
+    implementation(libs.coil.compose)
+    
+    // Animations
+    implementation(libs.lottie.compose)
+    
+    // Networking
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.gson)
+    implementation(libs.okhttp.logging)
+    
+    // DataStore
+    implementation(libs.androidx.datastore.preferences)
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

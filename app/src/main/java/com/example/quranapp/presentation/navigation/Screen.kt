@@ -20,5 +20,21 @@ sealed class Screen(val route: String) {
     object Progress : Screen("progress")
     object Settings : Screen("settings")
     object About : Screen("about")
+    object Login : Screen("login")
+    object Notifications : Screen("notifications")
+    object TafsirMenu : Screen("tafsir_menu")
+    object TafsirSurahList : Screen("tafsir_surah_list")
+    object AdhkarList : Screen("adhkar_list")
+    object AdhkarDetail : Screen("adhkar_detail/{categoryId}") {
+        fun createRoute(categoryId: Int) = "adhkar_detail/$categoryId"
+    }
+    object Tasbih : Screen("tasbih")
+    object QuranIndex : Screen("quran_index")
+    object QuranReading : Screen("quran_reading/{surahId}") {
+        fun createRoute(surahId: Int) = "quran_reading/$surahId"
+    }
+    object TafsirDetail : Screen("tafsir_detail/{surahName}") {
+        fun createRoute(surahName: String) = "tafsir_detail/$surahName"
+    }
 }
 
