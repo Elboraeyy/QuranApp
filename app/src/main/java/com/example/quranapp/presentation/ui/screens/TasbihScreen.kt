@@ -58,18 +58,17 @@ fun TasbihScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Refresh Button (Left)
+                // Back Button (Right in Arabic)
                 Surface(
                     shape = CircleShape,
-                    color = GreenPrimaryLight.copy(alpha = 0.1f),
-                    border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.3f)),
+                    color = MaterialTheme.colorScheme.surface,
                     modifier = Modifier.size(40.dp)
                 ) {
-                    IconButton(onClick = { viewModel.resetCount() }) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Reset Count",
-                            tint = GreenPrimaryLight
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, // Standard Back icon
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -81,17 +80,18 @@ fun TasbihScreen(
                     color = MaterialTheme.colorScheme.onBackground
                 )
 
-                // Back Button (Right in design)
+                // Refresh Button (Left in Arabic)
                 Surface(
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface,
+                    color = GreenPrimaryLight.copy(alpha = 0.1f),
+                    border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.3f)),
                     modifier = Modifier.size(40.dp)
                 ) {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { viewModel.resetCount() }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Reset Count",
+                            tint = GreenPrimaryLight
                         )
                     }
                 }

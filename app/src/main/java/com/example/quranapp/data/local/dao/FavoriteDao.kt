@@ -30,5 +30,11 @@ interface FavoriteDao {
     
     @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE type = :type AND surahNumber = :surahNumber AND ayahNumber = :ayahNumber AND (:reciterId IS NULL OR reciterId = :reciterId) AND (:tafsirId IS NULL OR tafsirId = :tafsirId))")
     suspend fun isFavorite(type: String, surahNumber: Int?, ayahNumber: Int?, reciterId: String?, tafsirId: String?): Boolean
+
+    @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE type = 'ADHKAR' AND adhkarId = :adhkarId)")
+    fun observeIsAdhkarFavorite(adhkarId: Int): Flow<Boolean>
+
+    @Query("SELECT * FROM favorites WHERE type = 'ADHKAR' AND adhkarId = :adhkarId LIMIT 1")
+    suspend fun getFavoriteByAdhkarId(adhkarId: Int): FavoriteEntity?
 }
 

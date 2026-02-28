@@ -17,7 +17,7 @@ class QuranApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        initializeDatabase()
+        // Removed mock data insertion: initializeDatabase()
     }
 
     private fun initializeDatabase() {

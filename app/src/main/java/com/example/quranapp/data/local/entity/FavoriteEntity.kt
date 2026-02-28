@@ -12,6 +12,7 @@ data class FavoriteEntity(
     val ayahNumber: Int? = null,
     val reciterId: String? = null,
     val tafsirId: String? = null,
+    val adhkarId: Int? = null,
     val createdAt: Long = System.currentTimeMillis()
 )
 

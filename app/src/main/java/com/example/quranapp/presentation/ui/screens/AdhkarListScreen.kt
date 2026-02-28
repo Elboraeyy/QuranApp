@@ -6,11 +6,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,20 +30,21 @@ import com.example.quranapp.presentation.navigation.Screen
 import com.example.quranapp.presentation.ui.theme.spacing
 import com.example.quranapp.presentation.ui.theme.GreenPrimaryLight
 
-@OptIn(ExperimentalMaterial3Api::class)
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.quranapp.presentation.viewmodel.AdhkarViewModel
+import com.example.quranapp.domain.model.AdhkarCategory
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun AdhkarListScreen(navController: NavController) {
+fun AdhkarListScreen(
+    navController: NavController,
+    viewModel: AdhkarViewModel = hiltViewModel()
+) {
     val spacing = MaterialTheme.spacing
     var showResetDialog by remember { mutableStateOf(false) }
-
-    // Mock Data
-    val categories = listOf(
-        AdhkarCategoryData(1, "أذكار الصباح", "ابدأ يومك بذكر الله، طمأنينة وبركة حتى المساء", 1, 20),
-        AdhkarCategoryData(2, "أذكار المساء", "اختم يومك بذكر الله، سَكينة وحفظ حتى الصباح", 8, 20),
-        AdhkarCategoryData(3, "أذكار النوم", "اذكر الله قبل نومك، ونم على طمأنينة", 0, 10),
-        AdhkarCategoryData(4, "أذكار الاستيقاظ", "ابدأ يومك بحمد الله مع أول استيقاظ", 2, 6),
-        AdhkarCategoryData(5, "أذكار قبل الصلاة", "تهيأ للصلاة بذكر الله وحضور القلب", 0, 8)
-    )
+    
+    val categories by viewModel.categories.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -59,18 +62,17 @@ fun AdhkarListScreen(navController: NavController) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Refresh/Reset Button
+                // Back Button (Right in Arabic)
                 Surface(
                     shape = CircleShape,
-                    color = Color.Transparent,
-                    border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.5f)),
+                    color = MaterialTheme.colorScheme.surface,
                     modifier = Modifier.size(40.dp)
                 ) {
-                    IconButton(onClick = { showResetDialog = true }) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Reset Progress",
-                            tint = GreenPrimaryLight
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, // Standard Back icon
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -82,17 +84,18 @@ fun AdhkarListScreen(navController: NavController) {
                     color = MaterialTheme.colorScheme.onBackground
                 )
 
-                // Back Button
+                // Refresh/Reset Button (Left in Arabic)
                 Surface(
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface,
+                    color = Color.Transparent,
+                    border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.5f)),
                     modifier = Modifier.size(40.dp)
                 ) {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { showResetDialog = true }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Reset Progress",
+                            tint = GreenPrimaryLight
                         )
                     }
                 }
@@ -111,16 +114,70 @@ fun AdhkarListScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // List of Categories
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = spacing.gridMargin),
-                contentPadding = PaddingValues(bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(categories) { category ->
-                    AdhkarCategoryCard(category = category, navController = navController)
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = GreenPrimaryLight)
+                }
+            } else {
+                // Group Categories
+                val groupedCategories = remember(categories) {
+                    categories.groupBy { getMetaCategoryForId(it.id) }
+                }
+
+                // Define preferred order for meta categories
+                val preferredOrder = listOf(
+                    "أذكار اليوم والليلة",
+                    "أذكار الصلاة",
+                    "أذكار الوضوء والمسجد",
+                    "أذكار المسكن",
+                    "أذكار اللباس",
+                    "أذكار الخلاء",
+                    "الطعام والشراب والصيام",
+                    "السفر والتنقل",
+                    "العواطف والمشاعر",
+                    "الحج والعمرة",
+                    "المرض والموت",
+                    "الطبيعة والظواهر",
+                    "الأسرة والعلاقات",
+                    "متفرقات وتسابيح"
+                )
+
+                // Sort the groups based on the preferred order
+                val sortedGroups = groupedCategories.entries.sortedBy { entry ->
+                    val index = preferredOrder.indexOf(entry.key)
+                    if (index != -1) index else preferredOrder.size
+                }
+
+                // List of Categories with Sticky Headers
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = spacing.gridMargin),
+                    contentPadding = PaddingValues(bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    sortedGroups.forEach { (metaCategory, sectionCategories) ->
+                        stickyHeader {
+                            Surface(
+                                color = MaterialTheme.colorScheme.background,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = metaCategory,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                            }
+                        }
+
+                        items(sectionCategories) { category ->
+                            AdhkarCategoryCard(category = category, navController = navController)
+                        }
+                    }
                 }
             }
         }
@@ -129,7 +186,7 @@ fun AdhkarListScreen(navController: NavController) {
     if (showResetDialog) {
         AdhkarResetDialog(
             onConfirm = {
-                // TODO: Reset logic
+                viewModel.resetAllProgress()
                 showResetDialog = false
             },
             onDismiss = { showResetDialog = false }
@@ -138,7 +195,7 @@ fun AdhkarListScreen(navController: NavController) {
 }
 
 @Composable
-fun AdhkarCategoryCard(category: AdhkarCategoryData, navController: NavController) {
+fun AdhkarCategoryCard(category: AdhkarCategory, navController: NavController) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = GreenPrimaryLight.copy(alpha = 0.05f),
@@ -154,45 +211,7 @@ fun AdhkarCategoryCard(category: AdhkarCategoryData, navController: NavControlle
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left Arrow
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.secondary, // Gold color from design
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack, // Pointing Left (forward in RTL conceptually, but design shows arrow pointing left)
-                    contentDescription = "Enter",
-                    tint = Color.White,
-                    modifier = Modifier.padding(6.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Text Content
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.End
-            ) {
-                Text(
-                    text = category.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = GreenPrimaryLight
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = category.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    textAlign = TextAlign.End
-                )
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Progress Circle
+            // Right Side: Progress Circle (Starts on Right in RTL)
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.size(60.dp)
@@ -218,6 +237,44 @@ fun AdhkarCategoryCard(category: AdhkarCategoryData, navController: NavControlle
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Middle: Text Content
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.Start // Right-aligned in RTL
+            ) {
+                Text(
+                    text = category.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = GreenPrimaryLight
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = category.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Start
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Left Side: Navigation Arrow (Ends on Left in RTL)
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft, // Points Left in design
+                    contentDescription = "Enter",
+                    tint = Color.White,
+                    modifier = Modifier.padding(6.dp)
+                )
             }
         }
     }
@@ -331,3 +388,23 @@ data class AdhkarCategoryData(
     val progress: Int,
     val total: Int
 )
+
+fun getMetaCategoryForId(id: Int): String {
+    return when (id) {
+        1, 2, 3, 28, 29, 30, 31, 134 -> "أذكار اليوم والليلة"
+        16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 32, 33, 41 -> "أذكار الصلاة"
+        9, 10, 13, 14, 15 -> "أذكار الوضوء والمسجد"
+        11, 12 -> "أذكار المسكن"
+        4, 5, 6 -> "أذكار اللباس"
+        7, 8 -> "أذكار الخلاء"
+        67, 68, 69, 70, 71, 72, 73, 74, 75 -> "الطعام والشراب والصيام"
+        94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104 -> "السفر والتنقل"
+        34, 35, 36, 37, 38, 39, 40, 42, 45, 81, 121, 123, 124, 125, 105, 122 -> "العواطف والمشاعر"
+        114, 115, 116, 117, 118, 119, 120 -> "الحج والعمرة"
+        48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59 -> "المرض والموت"
+        60, 61, 62, 63, 64, 65, 66 -> "الطبيعة والظواهر"
+        46, 47, 78, 79, 80 -> "الأسرة والعلاقات"
+        43, 44, 76, 77, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 106, 107, 108, 109, 110, 111, 112, 113, 126, 127, 128, 129, 130, 131, 132, 133, 135 -> "متفرقات وتسابيح"
+        else -> "متفرقات وتسابيح"
+    }
+}

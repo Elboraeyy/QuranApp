@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -26,6 +27,14 @@ import com.example.quranapp.presentation.ui.theme.spacing
 import com.example.quranapp.presentation.ui.theme.GreenPrimaryLight
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.quranapp.presentation.viewmodel.SurahDetailViewModel
+import com.example.quranapp.presentation.ui.theme.quranic
+
+fun Number.toArabicNumerals(): String {
+    val arabicNumerals = arrayOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
+    return this.toString().map { char ->
+        if (char.isDigit()) arabicNumerals[char.toString().toInt()] else char
+    }.joinToString("")
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +50,8 @@ fun QuranReadingScreen(
 
     val surah by viewModel.surah.collectAsState()
     val ayahs by viewModel.ayahs.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
     LaunchedEffect(surahId) {
         viewModel.loadSurah(surahId)
@@ -74,8 +85,45 @@ fun QuranReadingScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Back Button (Right in design/Arabic)
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, // Standard Back icon
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
                 // Action Buttons (Left)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Share
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.5f)),
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        IconButton(onClick = { /* TODO */ }) {
+                            Icon(imageVector = Icons.Default.Share, contentDescription = "Share", tint = GreenPrimaryLight)
+                        }
+                    }
+                    // Bookmark
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.5f)),
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        IconButton(onClick = { /* TODO */ }) {
+                            Icon(imageVector = Icons.Default.BookmarkBorder, contentDescription = "Bookmark", tint = GreenPrimaryLight)
+                        }
+                    }
                     // Audio
                     Surface(
                         shape = RoundedCornerShape(12.dp),
@@ -91,43 +139,6 @@ fun QuranReadingScreen(
                             )
                         }
                     }
-                    // Bookmark
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.5f)),
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        IconButton(onClick = { /* TODO */ }) {
-                            Icon(imageVector = Icons.Default.BookmarkBorder, contentDescription = "Bookmark", tint = GreenPrimaryLight)
-                        }
-                    }
-                    // Share
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.5f)),
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        IconButton(onClick = { /* TODO */ }) {
-                            Icon(imageVector = Icons.Default.Share, contentDescription = "Share", tint = GreenPrimaryLight)
-                        }
-                    }
-                }
-                
-                // Back Button (Right in design)
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
                 }
             }
 
@@ -141,40 +152,78 @@ fun QuranReadingScreen(
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Bismillah Banner (Placeholder for decorative image)
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Divider(color = GreenPrimaryLight, thickness = 2.dp, modifier = Modifier.padding(horizontal = 32.dp))
-                    Text(
-                        text = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = GreenPrimaryLight,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(vertical = 12.dp)
-                    )
-                    Divider(color = GreenPrimaryLight, thickness = 2.dp, modifier = Modifier.padding(horizontal = 32.dp))
+                // Bismillah Banner
+                if (surahId != 1 && surahId != 9) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        HorizontalDivider(
+                            color = GreenPrimaryLight,
+                            thickness = 2.dp,
+                            modifier = Modifier.padding(horizontal = 32.dp)
+                        )
+                        Text(
+                            text = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", // Exact Uthmani chars
+                            style = MaterialTheme.typography.headlineMedium.quranic,
+                            color = GreenPrimaryLight,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 12.dp),
+                            fontSize = 32.sp
+                        )
+                        HorizontalDivider(
+                            color = GreenPrimaryLight,
+                            thickness = 2.dp,
+                            modifier = Modifier.padding(horizontal = 32.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
 
                 // Quranic Text Example
-                if (ayahs.isEmpty()) {
-                     CircularProgressIndicator(
-                         modifier = Modifier.fillMaxWidth().wrapContentWidth(Alignment.CenterHorizontally),
-                         color = GreenPrimaryLight
-                     )
-                } else {
-                    val fullText = ayahs.joinToString(" ") { "${it.text} ﴿${it.numberInSurah}﴾" }
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentWidth(Alignment.CenterHorizontally),
+                        color = GreenPrimaryLight
+                    )
+                } else if (errorMessage != null) {
+                    Text(
+                        text = "Error: $errorMessage",
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                } else if (ayahs.isNotEmpty()) {
+                    val fullText = ayahs.mapIndexed { index, ayah ->
+                        var text = ayah.text
+                        // Strip bismillah if it's the first ayah and not Surah 1
+                        if (index == 0 && surahId != 1 && surahId != 9) {
+                            // AlQuran Cloud Uthmani text exact prefix
+                            val bismillahPrefix = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
+                            if (text.startsWith(bismillahPrefix)) {
+                                text = text.removePrefix(bismillahPrefix).trim()
+                            }
+                        }
+                        "$text \uFD3F${ayah.numberInSurah.toArabicNumerals()}\uFD3E"
+                    }.joinToString(" ")
                     Text(
                         text = fullText,
-                        style = MaterialTheme.typography.headlineLarge, // Ideally use Scheherazade New
-                        fontSize = 28.sp,
-                        lineHeight = 44.sp,
-                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.headlineLarge.quranic,
+                        fontSize = 30.sp,
+                        lineHeight = 52.sp,
+                        textAlign = TextAlign.Justify,
                         color = MaterialTheme.colorScheme.onBackground
+                    )
+                } else {
+                    Text(
+                        text = "لا توجد بيانات متاحة حالياً",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
                     )
                 }
 

@@ -1,6 +1,5 @@
 package com.example.quranapp.presentation.ui.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,7 +8,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Headset
@@ -24,30 +25,72 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.quranapp.R
+import androidx.compose.runtime.*
+import com.example.quranapp.presentation.viewmodel.SettingsViewModel
+import com.example.quranapp.domain.model.ThemeMode
+import com.example.quranapp.domain.model.FontFamily
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.quranapp.presentation.navigation.Screen
 import com.example.quranapp.presentation.ui.components.BottomNavigationBar
 import com.example.quranapp.presentation.ui.theme.spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(navController: NavController) { // Keeping name SettingsScreen for NavGraph compatibility, but UI is Menu
+fun SettingsScreen(
+    navController: NavController,
+    viewModel: SettingsViewModel = hiltViewModel()
+) {
     val spacing = MaterialTheme.spacing
     val darkGreenBackground = MaterialTheme.colorScheme.primaryContainer
     
+    val settings by viewModel.settings.collectAsState()
+    
+    var showThemeDialog by remember { mutableStateOf(false) }
+    var showFontDialog by remember { mutableStateOf(false) }
+    
     val menuItems = listOf(
-        MenuItemData("المفضلة", Icons.Default.Bookmark),
-        MenuItemData("الإعدادات", Icons.Default.Settings),
-        MenuItemData("تواصل معنا", Icons.Default.Headset),
-        MenuItemData("تقييم التطبيق", Icons.Default.ThumbUp),
-        MenuItemData("من نحن؟", Icons.Default.HelpOutline),
-        MenuItemData("شارك التطبيق", Icons.Default.Share)
+        MenuItemData("المفضلة", Icons.Default.Bookmark) { 
+            navController.navigate(Screen.Favorites.route)
+        },
+        MenuItemData("مظهر التطبيق", Icons.Default.Settings) { 
+            showThemeDialog = true 
+        },
+        MenuItemData("نوع الخط", Icons.AutoMirrored.Filled.HelpOutline) { // Using as placeholder for font
+            showFontDialog = true
+        },
+        MenuItemData("تواصل معنا", Icons.Default.Headset) { /* Handle support */ },
+        MenuItemData("تقييم التطبيق", Icons.Default.ThumbUp) { /* Handle rate */ },
+        MenuItemData("من نحن؟", Icons.Default.HelpOutline) { 
+            navController.navigate(Screen.About.route) 
+        },
+        MenuItemData("شارك التطبيق", Icons.Default.Share) { /* Handle share */ }
     )
+
+    if (showThemeDialog) {
+        ThemeSelectionDialog(
+            currentTheme = settings.theme,
+            onThemeSelected = { 
+                viewModel.updateTheme(it)
+                showThemeDialog = false 
+            },
+            onDismiss = { showThemeDialog = false }
+        )
+    }
+
+    if (showFontDialog) {
+        FontSelectionDialog(
+            currentFont = settings.fontFamily,
+            onFontSelected = {
+                viewModel.updateFontFamily(it)
+                showFontDialog = false
+            },
+            onDismiss = { showFontDialog = false }
+        )
+    }
 
     Scaffold(
         bottomBar = {
@@ -70,15 +113,16 @@ fun SettingsScreen(navController: NavController) { // Keeping name SettingsScree
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Header (Arrow Left in LTR, so Right in RTL to go back... wait, design has ArrowRight on top right. We use ArrowForward meaning 'back' or 'close menu')
+                // Header (Back Button on Right in RTL)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 16.dp, bottom = 24.dp),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.Start
                 ) {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
-                            imageVector = Icons.Default.ArrowForward,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Close Menu",
                             tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
@@ -86,29 +130,26 @@ fun SettingsScreen(navController: NavController) { // Keeping name SettingsScree
                 }
 
                 // User Profile Section
+                // User Profile Section (Starts from Right)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Left side (Arrow)
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f),
-                        modifier = Modifier.size(32.dp)
+                    // Avatar
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .background(Color.Gray)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowForward, // Should point left in RTL, so maybe ArrowBack theoretically, but let's use a standard chevron if possible.
-                            contentDescription = "Edit Profile",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(6.dp)
-                        )
+                        // Placeholder for User Avatar
                     }
-                    
-                    Spacer(modifier = Modifier.weight(1f))
-                    
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
                     // User Info
-                    Column(horizontalAlignment = Alignment.End) {
+                    Column(horizontalAlignment = Alignment.Start) {
                         Text(
                             text = "مصطفى محمود",
                             style = MaterialTheme.typography.titleMedium,
@@ -121,17 +162,21 @@ fun SettingsScreen(navController: NavController) { // Keeping name SettingsScree
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                         )
                     }
-                    
-                    Spacer(modifier = Modifier.width(16.dp))
-                    
-                    // Avatar
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(Color.Gray)
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // Left side Arrow (Disclosure)
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f),
+                        modifier = Modifier.size(32.dp)
                     ) {
-                        // Placeholder for User Avatar
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "Edit Profile",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(6.dp)
+                        )
                     }
                 }
 
@@ -177,33 +222,124 @@ fun SettingsScreen(navController: NavController) { // Keeping name SettingsScree
 }
 
 @Composable
+fun ThemeSelectionDialog(
+    currentTheme: ThemeMode,
+    onThemeSelected: (ThemeMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("اختر مظهر التطبيق", fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                ThemeOption("فاتح", ThemeMode.LIGHT, currentTheme == ThemeMode.LIGHT) { onThemeSelected(ThemeMode.LIGHT) }
+                ThemeOption("داكن", ThemeMode.DARK, currentTheme == ThemeMode.DARK) { onThemeSelected(ThemeMode.DARK) }
+                ThemeOption("تلقائي (حسب النظام)", ThemeMode.SYSTEM, currentTheme == ThemeMode.SYSTEM) { onThemeSelected(ThemeMode.SYSTEM) }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("إلغاء") }
+        }
+    )
+}
+
+@Composable
+fun ThemeOption(title: String, mode: ThemeMode, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = title, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+@Composable
+fun FontSelectionDialog(
+    currentFont: FontFamily,
+    onFontSelected: (FontFamily) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("اختر نوع الخط", fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                FontOption("عثماني (Uthmani)", FontFamily.UTHMANI, currentFont == FontFamily.UTHMANI) { onFontSelected(FontFamily.UTHMANI) }
+                FontOption("إندوباك (Indo-Pak)", FontFamily.INDO_PAK, currentFont == FontFamily.INDO_PAK) { onFontSelected(FontFamily.INDO_PAK) }
+                FontOption("عادي (Standard)", FontFamily.NOOR_HAYAH, currentFont == FontFamily.NOOR_HAYAH) { onFontSelected(FontFamily.NOOR_HAYAH) }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("إلغاء") }
+        }
+    )
+}
+
+@Composable
+fun FontOption(title: String, font: FontFamily, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = title, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+data class MenuItemData(
+    val title: String, 
+    val icon: ImageVector,
+    val onClick: () -> Unit = {}
+)
+
+@Composable
 fun MenuListItem(item: MenuItemData) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* Handle click */ },
-        horizontalArrangement = Arrangement.End,
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { item.onClick() }
+            .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = item.title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.error,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.width(16.dp))
         Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
-            modifier = Modifier.size(40.dp)
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f),
+            modifier = Modifier.size(48.dp)
         ) {
             Icon(
                 imageVector = item.icon,
                 contentDescription = item.title,
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(8.dp)
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.padding(12.dp)
             )
         }
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Text(
+            text = item.title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            fontWeight = FontWeight.SemiBold
+        )
+        
+        Spacer(modifier = Modifier.weight(1f))
+        
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f)
+        )
     }
 }
 
@@ -212,31 +348,31 @@ fun LogoutButton() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* Handle logout */ },
-        horizontalArrangement = Arrangement.End,
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { /* Handle logout */ }
+            .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "تسجيل الخروج",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.error, // Red color
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.width(16.dp))
         Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
-            modifier = Modifier.size(40.dp)
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.errorContainer,
+            modifier = Modifier.size(48.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.ExitToApp,
-                contentDescription = "Logout",
+                contentDescription = "تسجيل الخروج",
                 tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(8.dp)
+                modifier = Modifier.padding(12.dp)
             )
         }
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Text(
+            text = "تسجيل الخروج",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.error,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
-
-data class MenuItemData(val title: String, val icon: ImageVector)
-

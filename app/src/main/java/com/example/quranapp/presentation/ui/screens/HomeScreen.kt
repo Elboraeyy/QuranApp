@@ -31,19 +31,24 @@ import com.example.quranapp.presentation.navigation.Screen
 import com.example.quranapp.presentation.ui.components.BottomNavigationBar
 import com.example.quranapp.presentation.ui.theme.GreenPrimaryLight
 import com.example.quranapp.presentation.ui.theme.spacing
-import com.example.quranapp.presentation.ui.theme.LocalThemeMode
-import com.example.quranapp.presentation.ui.theme.ThemeMode
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.quranapp.presentation.viewmodel.PrayerTimesViewModel
+import com.example.quranapp.presentation.viewmodel.SettingsViewModel
 import com.example.quranapp.domain.model.PrayerTime
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
+import com.example.quranapp.domain.model.ThemeMode
 
 @Composable
 fun HomeScreen(
     navController: NavController,
-    prayerViewModel: PrayerTimesViewModel = hiltViewModel()
+    prayerViewModel: PrayerTimesViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel()
 ) {
     val currentRoute = Screen.Home.route
     val spacing = MaterialTheme.spacing
@@ -51,6 +56,27 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     
     val todayPrayerTime by prayerViewModel.today.collectAsState()
+    val locationName by prayerViewModel.locationName.collectAsState()
+    val settings by settingsViewModel.settings.collectAsState()
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { permissions ->
+            if (permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) ||
+                permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)) {
+                prayerViewModel.fetchPrayerTimes()
+            }
+        }
+    )
+
+    LaunchedEffect(Unit) {
+        locationPermissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+        )
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -84,7 +110,11 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             item {
-                TopSection()
+                TopSection(
+                    locationName = locationName,
+                    currentTheme = settings.theme,
+                    onThemeChange = { settingsViewModel.updateTheme(it) }
+                )
             }
 
             item {
@@ -108,7 +138,11 @@ fun HomeScreen(
 }
 
 @Composable
-fun TopSection() {
+fun TopSection(
+    locationName: String = "القاهرة، مصر",
+    currentTheme: ThemeMode,
+    onThemeChange: (ThemeMode) -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -132,7 +166,7 @@ fun TopSection() {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "منية النصر - الدقهلية",
+                    text = locationName,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -151,8 +185,7 @@ fun TopSection() {
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
         ) {
-            val themeModeState = LocalThemeMode.current
-            val isDarkTheme = when (themeModeState.value) {
+            val isDarkTheme = when (currentTheme) {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
@@ -166,7 +199,7 @@ fun TopSection() {
                         .size(32.dp)
                         .clip(CircleShape)
                         .background(if (isDarkTheme) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                        .clickable { themeModeState.value = ThemeMode.DARK },
+                        .clickable { onThemeChange(ThemeMode.DARK) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -181,7 +214,7 @@ fun TopSection() {
                         .size(32.dp)
                         .clip(CircleShape)
                         .background(if (!isDarkTheme) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                        .clickable { themeModeState.value = ThemeMode.LIGHT },
+                        .clickable { onThemeChange(ThemeMode.LIGHT) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -253,7 +286,7 @@ fun PrayerTimesCard(prayerTime: PrayerTime?) {
                 // Next Prayer Info
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.End
+                    horizontalAlignment = Alignment.Start
                 ) {
                     Text(
                         text = "المغرب", // Mock next prayer name logic
@@ -476,7 +509,7 @@ fun DrawerContent(navController: NavController, closeDrawer: () -> Unit) {
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(horizontalAlignment = Alignment.End) {
+                    Column(horizontalAlignment = Alignment.Start) {
                         Text(
                             text = "مصطفى محمود",
                             style = MaterialTheme.typography.titleMedium,
@@ -522,7 +555,7 @@ fun DrawerContent(navController: NavController, closeDrawer: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(24.dp),
-                horizontalAlignment = Alignment.End
+                horizontalAlignment = Alignment.Start
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -569,20 +602,20 @@ fun DrawerMenuItem(icon: androidx.compose.ui.graphics.vector.ImageVector, title:
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(vertical = 16.dp),
-        horizontalArrangement = Arrangement.End,
+        horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onPrimary
-        )
-        Spacer(modifier = Modifier.width(16.dp))
         Icon(
             imageVector = icon,
             contentDescription = title,
             tint = Color.White,
             modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onPrimary
         )
     }
 }

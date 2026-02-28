@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -38,34 +39,36 @@ fun QuranIndexScreen(
     var selectedTab by remember { mutableStateOf(0) } // 0 for Surah, 1 for Juz
 
     val surahs by viewModel.surahs.collectAsState()
+    val juzBoundaries by viewModel.juzBoundaries.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.loadSurahs()
     }
 
-    // Mock Juz Data for now
-    val juzs = listOf(
-        QuranJuzData(
-            id = 1,
-            name = "الجزء الأول",
-            verses = listOf(
-                QuranJuzVerseData("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", "سُورَةُ الْفَاتِحَةِ - 7 آيات", "1"),
-                QuranJuzVerseData("إِنَّ اللَّهَ لَا يَسْتَحْيِي أَن يَضْرِبَ مَثَلًا...", "سُورَةُ الْبَقَرَةِ - 26 آية", "1/4"),
-                QuranJuzVerseData("أَتَأْمُرُونَ النَّاسَ بِالْبِرِّ وَتَنسَوْنَ أَنفُسَكُمْ...", "سُورَةُ الْبَقَرَةِ - 44 آية", "1/2"),
-                QuranJuzVerseData("وَإِذِ اسْتَسْقَىٰ مُوسَىٰ لِقَوْمِهِ...", "سُورَةُ الْبَقَرَةِ - 60 آية", "3/4")
-            )
-        ),
-        QuranJuzData(
-            id = 2,
-            name = "الجزء الثاني",
-            verses = listOf(
-                QuranJuzVerseData("أَفَتَطْمَعُونَ أَن يُؤْمِنُوا لَكُمْ وَقَدْ كَانَ...", "سُورَةُ الْبَقَرَةِ - 75 آية", "2"),
-                QuranJuzVerseData("وَلَقَدْ جَاءَكُم مُوسَىٰ بِالْبَيِّنَاتِ ثُمَّ...", "سُورَةُ الْبَقَرَةِ - 92 آية", "1/4"),
-                QuranJuzVerseData("مَا نَنسَخْ مِنْ آيَةٍ أَوْ نُنسِهَا نَأْتِ...", "سُورَةُ الْبَقَرَةِ - 106 آية", "1/2")
-            )
-        )
-    )
+    // Map Ayah boundaries into logical Juz structures for UI
+    val juzs = remember(juzBoundaries, surahs) {
+        if (surahs.isEmpty() || juzBoundaries.isEmpty()) emptyList()
+        else {
+            juzBoundaries.map { ayah ->
+                val surah = surahs.find { it.number == ayah.surahNumber }
+                QuranJuzData(
+                    id = ayah.juz,
+                    name = "الجزء ${ayah.juz}",
+                    verses = listOf(
+                        // Just one preview verse per Juz for now
+                        QuranJuzVerseData(
+                            text = ayah.text,
+                            details = "سُورَةُ ${surah?.nameArabic ?: ""} - آية ${ayah.numberInSurah}",
+                            badge = ayah.page.toString(),
+                            surahNumber = ayah.surahNumber
+                        )
+                    )
+                )
+            }
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -83,7 +86,29 @@ fun QuranIndexScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Search Button (Left)
+                // Back Button (Right in Arabic)
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, // Standard Back icon
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                Text(
+                    text = "القرآن الكريم",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                // Search Button (Left in Arabic)
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = Color.White,
@@ -94,28 +119,6 @@ fun QuranIndexScreen(
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "Search",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-                
-                Text(
-                    text = "القرآن الكريم",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                
-                // Back Button (Right in design)
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -178,6 +181,14 @@ fun QuranIndexScreen(
                                 color = GreenPrimaryLight
                             )
                         }
+                    } else if (errorMessage != null) {
+                        item {
+                            Text(
+                                "Error: $errorMessage",
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                     } else if (surahs.isEmpty()) {
                         item {
                             Text(
@@ -193,9 +204,36 @@ fun QuranIndexScreen(
                         }
                     }
                 } else {
-                    // Juz View
-                    items(juzs) { juz ->
-                        QuranJuzAccordion(juz = juz, navController = navController)
+                    if (isLoading) {
+                        item {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentWidth(Alignment.CenterHorizontally),
+                                color = GreenPrimaryLight
+                            )
+                        }
+                    } else if (errorMessage != null) {
+                        item {
+                            Text(
+                                "Error: $errorMessage",
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    } else if (juzs.isEmpty()) {
+                         item {
+                            Text(
+                                "جاري تحميل البيانات...",
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.onSurface.copy(0.6f)
+                            )
+                        }
+                    } else {
+                        // Juz View
+                        items(juzs) { juz ->
+                            QuranJuzAccordion(juz = juz, navController = navController)
+                        }
                     }
                 }
             }
@@ -257,42 +295,13 @@ fun QuranSurahItem(surah: Surah, navController: NavController) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left Side (Arrow)
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = Color.Transparent,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = "Open Surah",
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                    modifier = Modifier.padding(8.dp).size(20.dp)
-                )
-            }
-            
-            // Right Side (Surah Info & Icon)
+            // Right Side (Surah Info & Icon) - Starts on Right in RTL
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "سُورَةُ ${surah.nameArabic}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "${if (surah.revelationType == "Meccan") "مكية" else "مدنية"} - ${surah.numberOfAyahs} آية",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
-                }
-                Spacer(modifier = Modifier.width(16.dp))
                 // Decorative Box with number
                 Box(
                     modifier = Modifier.size(40.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Placeholder for green decorative icon around number
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = GreenPrimaryLight.copy(alpha = 0.1f),
@@ -305,6 +314,34 @@ fun QuranSurahItem(surah: Surah, navController: NavController) {
                         fontWeight = FontWeight.Bold
                     )
                 }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(horizontalAlignment = Alignment.Start) {
+                    Text(
+                        text = "سُورَةُ ${surah.nameArabic}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "${if (surah.revelationType == "Meccan") "مكية" else "مدنية"} - ${surah.numberOfAyahs} آية",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
+            // Left Side (Arrow) - Ends on Left in RTL
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = Color.Transparent,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    contentDescription = "Open Surah",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(8.dp).size(20.dp)
+                )
             }
         }
     }
@@ -330,26 +367,8 @@ fun QuranJuzAccordion(juz: QuranJuzData, navController: NavController) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    shape = CircleShape,
-                    color = Color.Transparent,
-                    border = BorderStroke(1.dp, Color(0xFFC9A24D).copy(alpha = 0.5f))
-                ) {
-                    Icon(
-                        imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Expand/Collapse",
-                        tint = Color(0xFFC9A24D),
-                        modifier = Modifier.padding(8.dp).size(20.dp)
-                    )
-                }
-                
+                // Right Side: Title & Number (Starts on Right in RTL)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = juz.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
                     Box(
                         modifier = Modifier.size(36.dp),
                         contentAlignment = Alignment.Center
@@ -366,6 +385,26 @@ fun QuranJuzAccordion(juz: QuranJuzData, navController: NavController) {
                             fontWeight = FontWeight.Bold
                         )
                     }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = juz.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Left Side: Expand Icon (Ends on Left in RTL)
+                Surface(
+                    shape = CircleShape,
+                    color = Color.Transparent,
+                    border = BorderStroke(1.dp, Color(0xFFC9A24D).copy(alpha = 0.5f))
+                ) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Expand/Collapse",
+                        tint = Color(0xFFC9A24D),
+                        modifier = Modifier.padding(8.dp).size(20.dp)
+                    )
                 }
             }
 
@@ -395,39 +434,12 @@ fun QuranJuzVerseItem(verse: QuranJuzVerseData, navController: NavController) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { navController.navigate(Screen.QuranReading.createRoute(2)) /* hardcoded to 2 for mock juz */ }
+            .clickable { navController.navigate(Screen.QuranReading.createRoute(verse.surahNumber)) }
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = "Read",
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                modifier = Modifier.padding(8.dp).size(20.dp)
-            )
-        }
-        
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = verse.text,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = verse.details,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
             Surface(
                 shape = RoundedCornerShape(8.dp),
                 color = GreenPrimaryLight.copy(alpha = 0.1f),
@@ -441,9 +453,36 @@ fun QuranJuzVerseItem(verse: QuranJuzVerseData, navController: NavController) {
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(horizontalAlignment = Alignment.Start) {
+                Text(
+                    text = verse.text,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = verse.details,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            }
+        }
+        
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = "Read",
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                modifier = Modifier.padding(8.dp).size(20.dp)
+            )
         }
     }
 }
 
 data class QuranJuzData(val id: Int, val name: String, val verses: List<QuranJuzVerseData>)
-data class QuranJuzVerseData(val text: String, val details: String, val badge: String)
+data class QuranJuzVerseData(val text: String, val details: String, val badge: String, val surahNumber: Int)

@@ -15,11 +15,7 @@ import androidx.core.view.WindowCompat
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.MutableState
 
-enum class ThemeMode {
-    LIGHT, DARK, SYSTEM
-}
-
-val LocalThemeMode = compositionLocalOf<MutableState<ThemeMode>> { error("No ThemeMode provided") }
+// Local ThemeMode and LocalThemeMode removed to use domain model AppSettings
 
 private val LightColors = lightColorScheme(
     primary = GreenPrimaryLight,
@@ -90,7 +86,8 @@ fun QuranAppTheme(
     }
 
     androidx.compose.runtime.CompositionLocalProvider(
-        LocalSpacing provides Spacing()
+        LocalSpacing provides Spacing(),
+        androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl
     ) {
         MaterialTheme(
             colorScheme = colors,

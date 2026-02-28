@@ -13,6 +13,7 @@ interface QuranRepository {
     suspend fun searchAyat(query: String): List<Ayah>
     suspend fun getAyatByPage(page: Int): List<Ayah>
     suspend fun getAyatByJuz(juz: Int): List<Ayah>
+    suspend fun getJuzBoundaries(): List<Ayah>
     fun getSurahsFlow(): Flow<List<Surah>>
 }
 

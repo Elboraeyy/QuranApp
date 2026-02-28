@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ScreenRotation
@@ -38,6 +38,8 @@ import com.example.quranapp.presentation.ui.theme.spacing
 fun QiblaScreen(navController: NavController) {
     val viewModel: com.example.quranapp.presentation.viewmodel.QiblaViewModel = hiltViewModel()
     val direction by viewModel.direction.collectAsState()
+    val qiblaAngle by viewModel.qiblaAngle.collectAsState()
+    val distance by viewModel.distance.collectAsState()
     val spacing = MaterialTheme.spacing
 
     Scaffold(
@@ -56,7 +58,7 @@ fun QiblaScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(24.dp))
             
             // Map Card
-            QiblaMapCard()
+            QiblaMapCard(distance = distance)
             
             Spacer(modifier = Modifier.height(24.dp))
             
@@ -83,7 +85,7 @@ fun QiblaScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(32.dp))
             
             // Compass
-            QiblaCompass(direction = direction.toFloat())
+            QiblaCompass(direction = direction, qiblaAngle = qiblaAngle)
             
             Spacer(modifier = Modifier.weight(1f))
             
@@ -95,7 +97,7 @@ fun QiblaScreen(navController: NavController) {
                 modifier = Modifier.padding(bottom = 32.dp) // Bottom padding
             ) {
                 Text(
-                    text = "زاوية القبلة جنوب شرقي 141°",
+                    text = "زاوية القبلة ${qiblaAngle.toInt()}°",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -115,6 +117,27 @@ fun QiblaHeader(onBack: () -> Unit, onRefresh: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Back Button (Right in RTL)
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.size(48.dp)
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+
+        Text(
+            text = "القبلة",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+
         // Refresh Button (Left in RTL)
         Surface(
             shape = RoundedCornerShape(12.dp),
@@ -129,32 +152,11 @@ fun QiblaHeader(onBack: () -> Unit, onRefresh: () -> Unit) {
                 )
             }
         }
-
-        Text(
-            text = "القبلة",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-
-        // Back Button (Right in RTL)
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.size(48.dp)
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.Default.ArrowForward, // Points right, standard for RTL back
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
     }
 }
 
 @Composable
-fun QiblaMapCard() {
+fun QiblaMapCard(distance: Int) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -221,7 +223,7 @@ fun QiblaMapCard() {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "المسافة من مكة 1536كم",
+                        text = "المسافة من مكة ${distance}كم",
                         color = MaterialTheme.colorScheme.onBackground,
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold
@@ -279,7 +281,7 @@ fun QiblaMapCard() {
 }
 
 @Composable
-fun QiblaCompass(direction: Float) {
+fun QiblaCompass(direction: Float, qiblaAngle: Float) {
     Box(
         modifier = Modifier
             .size(300.dp)
@@ -354,8 +356,10 @@ fun QiblaCompass(direction: Float) {
         // For visual representation of the design, we place it at the top.
         Box(
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .offset(y = (-20).dp) // Pop out slightly
+                .fillMaxSize()
+                .rotate(qiblaAngle - direction) // Kaaba relative to current direction
+                .padding(16.dp),
+            contentAlignment = Alignment.TopCenter
         ) {
             Box(
                 modifier = Modifier

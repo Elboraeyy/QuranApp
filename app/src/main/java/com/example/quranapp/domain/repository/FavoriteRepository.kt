@@ -12,5 +12,7 @@ interface FavoriteRepository {
     suspend fun getFavoritesByType(type: FavoriteType): List<Favorite>
     fun getAllFavoritesFlow(): Flow<List<Favorite>>
     suspend fun isFavorite(type: FavoriteType, surahNumber: Int?, ayahNumber: Int?, reciterId: String?, tafsirId: String?): Boolean
+    fun observeIsAdhkarFavorite(adhkarId: Int): Flow<Boolean>
+    suspend fun getFavoriteByAdhkarId(adhkarId: Int): Favorite?
 }
 

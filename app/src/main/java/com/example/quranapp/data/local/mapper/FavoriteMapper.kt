@@ -12,6 +12,7 @@ fun FavoriteEntity.toDomain(): Favorite {
         ayahNumber = ayahNumber,
         reciterId = reciterId,
         tafsirId = tafsirId,
+        adhkarId = adhkarId,
         createdAt = createdAt
     )
 }
@@ -24,6 +25,7 @@ fun Favorite.toEntity(): FavoriteEntity {
         ayahNumber = ayahNumber,
         reciterId = reciterId,
         tafsirId = tafsirId,
+        adhkarId = adhkarId,
         createdAt = createdAt
     )
 }

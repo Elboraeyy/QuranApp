@@ -47,5 +47,13 @@ class FavoriteRepositoryImpl @Inject constructor(
     ): Boolean {
         return favoriteDao.isFavorite(type.name, surahNumber, ayahNumber, reciterId, tafsirId)
     }
+
+    override fun observeIsAdhkarFavorite(adhkarId: Int): Flow<Boolean> {
+        return favoriteDao.observeIsAdhkarFavorite(adhkarId)
+    }
+
+    override suspend fun getFavoriteByAdhkarId(adhkarId: Int): Favorite? {
+        return favoriteDao.getFavoriteByAdhkarId(adhkarId)?.toDomain()
+    }
 }
 
