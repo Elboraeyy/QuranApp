@@ -46,6 +46,8 @@ import com.example.quranapp.data.repository.ProgressRepositoryImpl
 import com.example.quranapp.data.repository.QuranRepositoryImpl
 import com.example.quranapp.data.repository.SettingsRepositoryImpl
 import com.example.quranapp.data.repository.TafsirRepositoryImpl
+import com.example.quranapp.domain.repository.TasbihRepository
+import com.example.quranapp.data.repository.TasbihRepositoryImpl
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -146,8 +148,17 @@ object AppModule {
     
     @Provides
     @Singleton
-    fun provideTafsirRepository(): TafsirRepository {
-        return TafsirRepositoryImpl()
+    fun provideAudioPlayerManager(
+        @ApplicationContext context: android.content.Context,
+        audioRepository: AudioRepository
+    ): com.example.quranapp.domain.manager.AudioPlayerManager {
+        return com.example.quranapp.data.manager.AudioPlayerManagerImpl(context, audioRepository)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideTafsirRepository(quranApi: QuranApi): TafsirRepository {
+        return TafsirRepositoryImpl(quranApi)
     }
     
     @Provides
@@ -228,6 +239,14 @@ object AppModule {
         @ApplicationContext context: Context
     ): QiblaTracker {
         return DefaultQiblaTracker(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideTasbihRepository(
+        @ApplicationContext context: Context
+    ): TasbihRepository {
+        return TasbihRepositoryImpl(context)
     }
 }
 

@@ -1,5 +1,6 @@
 package com.example.quranapp.presentation.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,8 +12,15 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -24,97 +32,94 @@ import com.example.quranapp.presentation.navigation.Screen
 import com.example.quranapp.presentation.ui.theme.GreenPrimaryLight
 
 @Composable
-fun BottomNavigationBar(navController: NavController, currentRoute: String?, onMenuClick: (() -> Unit)? = null) {
+fun BottomNavigationBar(
+    navController: NavController,
+    currentRoute: String?,
+    modifier: Modifier = Modifier,
+    onMenuClick: (() -> Unit)? = null
+) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .height(100.dp), // Total height includes space for FAB overlap
+            .padding(horizontal = 24.dp, vertical = 24.dp), // Floating effect
         contentAlignment = Alignment.BottomCenter
     ) {
         // Main Navigation Bar Container
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(72.dp)
+                .height(64.dp) // Sleeker height
                 .shadow(
-                    elevation = 16.dp, 
-                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                    spotColor = Color.Black.copy(alpha = 0.1f)
+                    elevation = 20.dp, 
+                    shape = RoundedCornerShape(32.dp),
+                    spotColor = GreenPrimaryLight.copy(alpha = 0.15f) // Elegant tinted shadow
                 ),
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-            color = MaterialTheme.colorScheme.surface
+            shape = RoundedCornerShape(32.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left side items
+                // Right side items (in RTL, these appear on the visual right)
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.SpaceEvenly) {
                     NavItem(
-                        label = "الرئيسية",
-                        icon = Icons.Default.Home,
-                        isSelected = currentRoute == Screen.Home.route,
-                        onClick = { navigateTo(navController, Screen.Home.route) }
+                        label = "المصحف",
+                        icon = Icons.Default.MenuBook,
+                        isSelected = currentRoute == Screen.QuranIndex.route || currentRoute?.startsWith("quran_reading") == true,
+                        onClick = { navigateTo(navController, Screen.QuranIndex.route) }
                     )
                     NavItem(
-                        label = "الصلاة",
-                        icon = Icons.Default.Mosque, // Placeholder for specific prayer icon
-                        isSelected = currentRoute == Screen.PrayerTimes.route,
-                        onClick = { navigateTo(navController, Screen.PrayerTimes.route) }
+                        label = "المهام",
+                        icon = Icons.Default.CheckCircle,
+                        isSelected = currentRoute == Screen.DailyTasks.route,
+                        onClick = { navigateTo(navController, Screen.DailyTasks.route) }
                     )
                 }
 
                 // Space for middle FAB
-                Spacer(modifier = Modifier.width(72.dp))
+                Spacer(modifier = Modifier.width(56.dp))
 
-                // Right side items
+                // Left side items (in RTL, these appear on the visual left)
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.SpaceEvenly) {
                     NavItem(
-                        label = "الإشعارات",
-                        icon = Icons.Default.Notifications,
-                        isSelected = currentRoute == Screen.Notifications.route,
-                        hasBadge = true,
-                        badgeCount = 9,
-                        onClick = { navigateTo(navController, Screen.Notifications.route) }
+                        label = "الإحصائيات",
+                        icon = Icons.Default.BarChart,
+                        isSelected = currentRoute == Screen.Progress.route,
+                        onClick = { navigateTo(navController, Screen.Progress.route) }
                     )
                     NavItem(
-                        label = "القائمة",
-                        icon = Icons.Default.Menu,
-                        isSelected = currentRoute == Screen.Settings.route, // Mapping menu to settings
-                        onClick = { 
-                            if (onMenuClick != null) {
-                                onMenuClick()
-                            } else {
-                                navigateTo(navController, Screen.Settings.route) 
-                            }
-                        }
+                        label = "الإعدادات",
+                        icon = Icons.Default.Settings,
+                        isSelected = currentRoute == Screen.Settings.route,
+                        onClick = { navigateTo(navController, Screen.Settings.route) }
                     )
                 }
             }
         }
 
-        // Central Floating Action Button (Qibla)
+        // Central Floating Action Button (Home)
         Box(
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .offset(y = 8.dp) // Move slightly down from top to overlap nicely
-                .size(64.dp)
-                .shadow(8.dp, CircleShape)
+                .align(Alignment.Center)
+                .offset(y = (-16).dp) // Pop out of the top slightly
+                .size(56.dp) // Slightly smaller and more elegant
+                .shadow(12.dp, CircleShape, spotColor = GreenPrimaryLight.copy(alpha = 0.3f))
+                .border(2.dp, Color(0xFFC9A24D).copy(alpha = 0.5f), CircleShape) // Gold border
                 .clip(CircleShape)
                 .background(GreenPrimaryLight)
-                .border(4.dp, MaterialTheme.colorScheme.surface, CircleShape)
-                .clickable { navigateTo(navController, Screen.Qibla.route) },
+                .clickable { navigateTo(navController, Screen.Home.route) },
             contentAlignment = Alignment.Center
         ) {
-            // Placeholder for Kaaba/Compass icon
             Icon(
-                imageVector = Icons.Default.Explore,
-                contentDescription = "Qibla",
+                imageVector = Icons.Default.Home,
+                contentDescription = "Home",
                 tint = Color.White,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(28.dp)
             )
         }
     }
@@ -131,13 +136,36 @@ private fun NavItem(
 ) {
     val color = if (isSelected) GreenPrimaryLight else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
     
-    Column(
+    // Animation states
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 1.1f else 1f,
+        animationSpec = tween(durationMillis = 300),
+        label = "scale"
+    )
+    val backgroundAlpha by animateFloatAsState(
+        targetValue = if (isSelected) 0.1f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "alpha"
+    )
+
+    Box(
         modifier = Modifier
-            .clickable(onClick = onClick)
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .padding(4.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(GreenPrimaryLight.copy(alpha = backgroundAlpha))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
     ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.scale(scale)
+        ) {
         BadgedBox(
             badge = {
                 if (hasBadge) {
@@ -165,6 +193,7 @@ private fun NavItem(
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             fontSize = 10.sp
         )
+        }
     }
 }
 

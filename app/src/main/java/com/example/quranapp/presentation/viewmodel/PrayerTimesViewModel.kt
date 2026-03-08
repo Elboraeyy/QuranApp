@@ -8,6 +8,7 @@ import com.example.quranapp.domain.location.LocationTracker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import android.content.Context
 import android.location.Geocoder
+import com.example.quranapp.data.alarm.AdhanAlarmScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,7 @@ import javax.inject.Inject
 class PrayerTimesViewModel @Inject constructor(
     private val repository: PrayerRepository,
     private val locationTracker: LocationTracker,
+    private val alarmScheduler: AdhanAlarmScheduler,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -52,7 +54,11 @@ class PrayerTimesViewModel @Inject constructor(
                 e.printStackTrace()
             }
 
-            _today.value = repository.getTodayPrayerTime(lat, lng, 5) // 5 for Egyptian General Authority of Survey
+            val todayPrayerTimes = repository.getTodayPrayerTime(lat, lng, 5) // 5 for Egyptian General Authority of Survey
+            _today.value = todayPrayerTimes
+            
+            // Schedule Alarms
+            alarmScheduler.scheduleAlarms(todayPrayerTimes)
         }
     }
 }

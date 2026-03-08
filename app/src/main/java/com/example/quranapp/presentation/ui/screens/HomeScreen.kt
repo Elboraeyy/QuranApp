@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -13,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -42,22 +44,32 @@ import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.LaunchedEffect
 import com.example.quranapp.domain.model.ThemeMode
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.time.Duration
+
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import androidx.compose.ui.text.style.TextAlign
+import com.example.quranapp.presentation.viewmodel.HadithViewModel
 
 @Composable
 fun HomeScreen(
     navController: NavController,
     prayerViewModel: PrayerTimesViewModel = hiltViewModel(),
-    settingsViewModel: SettingsViewModel = hiltViewModel()
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
+    hadithViewModel: HadithViewModel = hiltViewModel()
 ) {
     val currentRoute = Screen.Home.route
     val spacing = MaterialTheme.spacing
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    
+
     val todayPrayerTime by prayerViewModel.today.collectAsState()
     val locationName by prayerViewModel.locationName.collectAsState()
     val settings by settingsViewModel.settings.collectAsState()
+    val currentHadith by hadithViewModel.currentHadith.collectAsState()
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
@@ -78,63 +90,49 @@ fun HomeScreen(
         )
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet(
-                drawerContainerColor = Color.Transparent,
-                drawerShape = RoundedCornerShape(0.dp)
+    Scaffold { padding ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(padding),
+                contentPadding = PaddingValues(spacing.gridMargin),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                DrawerContent(navController = navController) {
-                    scope.launch { drawerState.close() }
+                item {
+                    TopSection(
+                        locationName = locationName,
+                        currentTheme = settings.theme,
+                        onThemeChange = { settingsViewModel.updateTheme(it) }
+                    )
+                }
+
+                item {
+                    PrayerTimesCard(prayerTime = todayPrayerTime)
+                }
+
+                item {
+                    ToolsSection(navController = navController)
+                }
+
+                item {
+                    HadithSection(hadith = currentHadith)
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(100.dp)) // Extra space for FAB and bottom bar overlap
                 }
             }
-        },
-        gesturesEnabled = true
-    ) {
-        Scaffold(
-            bottomBar = {
-                BottomNavigationBar(
-                    navController = navController,
-                    currentRoute = currentRoute,
-                    onMenuClick = { scope.launch { drawerState.open() } }
-                )
-            }
-        ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(padding),
-            contentPadding = PaddingValues(spacing.gridMargin),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            item {
-                TopSection(
-                    locationName = locationName,
-                    currentTheme = settings.theme,
-                    onThemeChange = { settingsViewModel.updateTheme(it) }
-                )
-            }
 
-            item {
-                PrayerTimesCard(prayerTime = todayPrayerTime)
-            }
-
-            item {
-                ToolsSection(navController = navController)
-            }
-
-            item {
-                HadithSection()
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(80.dp)) // Extra space for FAB overlap
-            }
+            // Floating Bottom Navigation Bar
+            BottomNavigationBar(
+                navController = navController,
+                currentRoute = currentRoute,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
-}
 }
 
 @Composable
@@ -245,171 +243,155 @@ fun PrayerTimesCard(prayerTime: PrayerTime?) {
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(gradientBrush)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                // Top Row: Hijri Date and Icon
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Outlined.DateRange,
-                            contentDescription = "Date",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "الثلاثاء 26 جمادى الثاني 1447 هـ",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.Default.Mosque, // Placeholder for specific top-right icon
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
+        // Calculate next prayer
+        var nextPrayerName = "--"
+        var nextPrayerTime = "--:--"
+        var remainingTime = "--:--"
+
+        try {
+            if (prayerTime != null && prayerTime.fajr.isNotEmpty() && !prayerTime.fajr.contains("--")) {
+                val now = LocalTime.now()
+                val formatter = DateTimeFormatter.ofPattern("HH:mm")
+
+                // Helper to clean and parse time
+                fun parseTime(timeStr: String): LocalTime {
+                    val cleanTime = timeStr.substringBefore(" ").trim()
+                    return LocalTime.parse(cleanTime, formatter)
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                val prayers = listOf(
+                    "الفجر" to parseTime(prayerTime.fajr),
+                    "الشروق" to parseTime(prayerTime.sunrise),
+                    "الظهر" to parseTime(prayerTime.dhuhr),
+                    "العصر" to parseTime(prayerTime.asr),
+                    "المغرب" to parseTime(prayerTime.maghrib),
+                    "العشاء" to parseTime(prayerTime.isha)
+                )
 
-                // Next Prayer Info
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.Start
-                ) {
-                    Text(
-                        text = "المغرب", // Mock next prayer name logic
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = prayerTime?.maghrib ?: "--:--",
-                        style = MaterialTheme.typography.displayMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                val nextPrayer = prayers.firstOrNull { it.second.isAfter(now) }
+                if (nextPrayer != null) {
+                    nextPrayerName = nextPrayer.first
+                    nextPrayerTime = nextPrayer.second.format(formatter)
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 8.dp)
-                    ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.secondary,
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = "10:20",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "موعد الصلاة القادمة بعد",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                    }
-                }
+                    val duration = Duration.between(now, nextPrayer.second)
+                    val hours = duration.toHours()
+                    val minutes = duration.toMinutesPart()
+                    remainingTime = String.format("%02d:%02d", hours, minutes)
+                } else {
+                    // Next is tomorrow's Fajr
+                    nextPrayerName = "الفجر"
+                    nextPrayerTime = prayers[0].second.format(formatter)
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Daily Prayers Row
-                Surface(
-                    color = Color.White.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp, horizontal = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        DailyPrayerItem("الفجر", prayerTime?.fajr ?: "--:--", Icons.Default.WbCloudy, false)
-                        DailyPrayerItem("الشروق", prayerTime?.sunrise ?: "--:--", Icons.Default.WbSunny, false) // Changed from WbSunrise
-                        DailyPrayerItem("الظهر", prayerTime?.dhuhr ?: "--:--", Icons.Default.WbSunny, false)
-                        DailyPrayerItem("العصر", prayerTime?.asr ?: "--:--", Icons.Default.WbCloudy, false) // Using Cloudy as placeholder
-                        DailyPrayerItem("المغرب", prayerTime?.maghrib ?: "--:--", Icons.Default.Mosque, true)
-                        DailyPrayerItem("العشاء", prayerTime?.isha ?: "--:--", Icons.Default.NightlightRound, false)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Footer Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack, // Shows as Next due to RTL
-                        contentDescription = "View All",
-                        tint = Color.White,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .border(1.dp, Color.White.copy(alpha = 0.5f), CircleShape)
-                            .padding(4.dp)
-                    )
-
-                    Text(
-                        text = "إضغط لعرض جميع الصلوات",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White
-                    )
+                    // Add 24 hours for tomorrow's time to compute remaining time
+                    val duration = Duration.between(now, prayers[0].second.plusHours(24))
+                    val hours = duration.toHours()
+                    val minutes = duration.toMinutesPart()
+                    remainingTime = String.format("%02d:%02d", hours, minutes)
                 }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
+
+    // Beautiful elegant hero card
+    Surface(
+        shape = RoundedCornerShape(32.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp, // Soft elevation
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp), // More breathing room
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // "Next Prayer" subtitle
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = GreenPrimaryLight.copy(alpha = 0.08f)
+            ) {
+                Text(
+                    text = "الصلاة القادمة",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = GreenPrimaryLight,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // The Main Prayer Time Display (Huge, thin elegant font)
+            Text(
+                text = nextPrayerName,
+                style = MaterialTheme.typography.displayMedium,
+                fontWeight = FontWeight.Light,
+                color = MaterialTheme.colorScheme.onSurface,
+                letterSpacing = 2.sp
+            )
+
+            // Sub-time
+            Text(
+                text = "باقي $remainingTime",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
+            )
+
+            HorizontalDivider(
+                modifier = Modifier.fillMaxWidth(0.8f),
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Grid of prayer times at the bottom
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                PrayerTimeColumn("الفجر", prayerTime?.fajr ?: "00:00", isNext = nextPrayerName == "الفجر")
+                PrayerTimeColumn("الظهر", prayerTime?.dhuhr ?: "00:00", isNext = nextPrayerName == "الظهر")
+                PrayerTimeColumn("العصر", prayerTime?.asr ?: "00:00", isNext = nextPrayerName == "العصر")
+                PrayerTimeColumn("المغرب", prayerTime?.maghrib ?: "00:00", isNext = nextPrayerName == "المغرب")
+                PrayerTimeColumn("العشاء", prayerTime?.isha ?: "00:00", isNext = nextPrayerName == "العشاء")
+            }
+        }
+    }
     }
 }
 
 @Composable
-fun DailyPrayerItem(name: String, time: String, icon: ImageVector, isActive: Boolean) {
-    val alpha = if (isActive) 1f else 0.5f
+fun PrayerTimeColumn(name: String, time: String, isNext: Boolean = false) {
+    val contentColor = if (isNext) GreenPrimaryLight else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+    val fontWeight = if (isNext) FontWeight.Bold else FontWeight.Normal
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = if (isActive) {
-            Modifier
-                .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
-                .padding(vertical = 4.dp, horizontal = 8.dp)
-        } else {
-            Modifier.padding(vertical = 4.dp, horizontal = 0.dp)
-        }
+        modifier = Modifier.padding(horizontal = 4.dp)
     ) {
+        if (isNext) {
+            // Elegant dot indicator for the next prayer
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .background(contentColor, CircleShape)
+                    .offset(y = (-8).dp)
+            )
+        }
         Text(
             text = name,
             style = MaterialTheme.typography.labelMedium,
-            color = Color.White.copy(alpha = alpha),
-            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
+            color = contentColor,
+            fontWeight = fontWeight
         )
-        Spacer(modifier = Modifier.height(4.dp))
-        Icon(
-            imageVector = icon,
-            contentDescription = name,
-            tint = Color.White.copy(alpha = alpha),
-            modifier = Modifier.size(18.dp)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = time,
-            style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = alpha),
-            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-            fontSize = 10.sp
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isNext) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+            fontWeight = fontWeight
         )
     }
 }
@@ -455,30 +437,109 @@ fun ToolsSection(navController: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Tools Row
-        Row(
+        // Elegant horizontal list of tools
+        LazyRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp)
         ) {
-            ToolCard(
+            item {
+                ToolCard(
                 title = "القرآن الكريم",
-                icon = Icons.AutoMirrored.Filled.MenuBook,
-                onClick = { navController.navigate(Screen.QuranIndex.route) },
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            ToolCard(
-                title = "الأذكار",
-                icon = Icons.Default.SignLanguage,
-                onClick = { navController.navigate(Screen.AdhkarList.route) },
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            ToolCard(
-                title = "التسبيح",
-                icon = Icons.Default.SelfImprovement,
-                onClick = { navController.navigate(Screen.Tasbih.route) },
-                modifier = Modifier.weight(1f)
+                    icon = Icons.AutoMirrored.Filled.MenuBook,
+                    onClick = { navController.navigate(Screen.QuranIndex.route) },
+                    modifier = Modifier.width(110.dp)
+                )
+            }
+            item {
+                ToolCard(
+                    title = "الصلاة",
+                    icon = Icons.Default.Mosque,
+                    onClick = { navController.navigate(Screen.PrayerTimes.route) },
+                    modifier = Modifier.width(110.dp)
+                )
+            }
+            item {
+                ToolCard(
+                    title = "القبلة",
+                    icon = Icons.Default.Explore,
+                    onClick = { navController.navigate(Screen.Qibla.route) },
+                    modifier = Modifier.width(110.dp)
+                )
+            }
+            item {
+                ToolCard(
+                    title = "الأذكار",
+                    icon = Icons.Default.LibraryBooks,
+                    onClick = { navController.navigate(Screen.AdhkarList.route) },
+                    modifier = Modifier.width(110.dp)
+                )
+            }
+            item {
+                ToolCard(
+                    title = "التسبيح",
+                    icon = Icons.Default.Favorite,
+                    onClick = { navController.navigate(Screen.Tasbih.route) },
+                    modifier = Modifier.width(110.dp)
+                )
+            }
+            item {
+                ToolCard(
+                    title = "الحديث",
+                    icon = Icons.Default.MenuBook, // Fallback icon for Hadith
+                    onClick = { /* Navigate to Hadith Screen when implemented */ },
+                    modifier = Modifier.width(110.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ToolCard(
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(24.dp), // Soft round corners
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 6.dp, // Subtle lift
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)),
+        modifier = modifier
+            .aspectRatio(0.9f) // Slightly taller than wide for elegance
+            .clickable(onClick = onClick)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Icon surrounded by an elegant soft circle
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                modifier = Modifier.size(56.dp) // Generous icon container
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = GreenPrimaryLight,
+                    modifier = Modifier
+                        .padding(14.dp)
+                        .fillMaxSize()
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                lineHeight = 18.sp
             )
         }
     }
@@ -539,15 +600,48 @@ fun DrawerContent(navController: NavController, closeDrawer: () -> Unit) {
 
             // Menu Items
             Column(modifier = Modifier.weight(1f).padding(horizontal = 24.dp)) {
+                val context = LocalContext.current
                 DrawerMenuItem(icon = Icons.Default.Bookmark, title = "المفضلة") {
                     navController.navigate(Screen.Favorites.route)
                     closeDrawer()
                 }
-                DrawerMenuItem(icon = Icons.Default.Settings, title = "الإعدادات") { /* TODO */ }
-                DrawerMenuItem(icon = Icons.Default.HeadsetMic, title = "تواصل معنا") { /* TODO */ }
-                DrawerMenuItem(icon = Icons.Default.ThumbUp, title = "تقييم التطبيق") { /* TODO */ }
-                DrawerMenuItem(icon = Icons.Default.HelpOutline, title = "من نحن؟") { /* TODO */ }
-                DrawerMenuItem(icon = Icons.Default.Share, title = "شارك التطبيق") { /* TODO */ }
+                DrawerMenuItem(icon = Icons.Default.Settings, title = "الإعدادات") {
+                    navController.navigate(Screen.Settings.route)
+                    closeDrawer()
+                }
+                DrawerMenuItem(icon = Icons.Default.HeadsetMic, title = "تواصل معنا") {
+                    val intent = Intent(Intent.ACTION_SENDTO).apply {
+                        data = android.net.Uri.parse("mailto:support@zadmuslim.com")
+                        putExtra(Intent.EXTRA_SUBJECT, "تطبيق زاد مسلم - تواصل")
+                    }
+                    context.startActivity(Intent.createChooser(intent, "اختر تطبيق البريد"))
+                    closeDrawer()
+                }
+                DrawerMenuItem(icon = Icons.Default.ThumbUp, title = "تقييم التطبيق") {
+                    // In a real app, link to play store
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        data = android.net.Uri.parse("market://details?id=${context.packageName}")
+                    }
+                    try {
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=${context.packageName}")))
+                    }
+                    closeDrawer()
+                }
+                DrawerMenuItem(icon = Icons.Default.HelpOutline, title = "عن التطبيق") {
+                    navController.navigate(Screen.About.route)
+                    closeDrawer()
+                }
+                DrawerMenuItem(icon = Icons.Default.Share, title = "شارك التطبيق") {
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, "تطبيق زاد مسلم")
+                        putExtra(Intent.EXTRA_TEXT, "حمل تطبيق زاد مسلم دليلك الشامل لكل ما يحتاجه المسلم: https://play.google.com/store/apps/details?id=${context.packageName}")
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "مشاركة التطبيق"))
+                    closeDrawer()
+                }
             }
 
             // Footer / Logout
@@ -620,46 +714,10 @@ fun DrawerMenuItem(icon: androidx.compose.ui.graphics.vector.ImageVector, title:
     }
 }
 
-@Composable
-fun ToolCard(title: String, icon: ImageVector, onClick: () -> Unit = {}, modifier: Modifier = Modifier) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.aspectRatio(1f), // Make it a square
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            // Placeholder for illustrated icon
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
+// Duplicated ToolCard removed from here
 
 @Composable
-fun HadithSection() {
+fun HadithSection(hadith: com.example.quranapp.domain.model.Hadith?) {
     Column(modifier = Modifier.fillMaxWidth()) {
         // Section Header
         Row(
@@ -668,84 +726,93 @@ fun HadithSection() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "الأحاديث",
+                text = "حديث اليوم",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.5f)),
-                color = Color.Transparent
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "رؤية الكل",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = GreenPrimaryLight
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowLeft, // Points left in RTL
-                        contentDescription = "View All",
-                        tint = GreenPrimaryLight,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         // Hadith Card
-        Card(
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            shape = RoundedCornerShape(32.dp),
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 8.dp,
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                // Top row with actions and source
+            Column(modifier = Modifier.padding(24.dp)) {
+                // Top row with quote icon and share
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Top
                 ) {
-                    Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "الراوي : أبو سعيد الخدري",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "المحدث : ابن حبان",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.FormatQuote,
+                        contentDescription = null,
+                        tint = Color(0xFFC9A24D).copy(alpha = 0.5f), // Gold Quote Icon
+                        modifier = Modifier.size(40.dp)
+                    )
 
-                    Row {
-                        IconButton(onClick = { /* Share */ }, modifier = Modifier.size(36.dp)) {
+                    val context = LocalContext.current
+                    val shareText = "${hadith?.text}\n- ${hadith?.narrator} (${hadith?.source})"
+
+                    Surface(
+                        shape = CircleShape,
+                        color = Color(0xFFC9A24D).copy(alpha = 0.1f),
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        IconButton(onClick = {
+                            val sendIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, shareText)
+                                type = "text/plain"
+                            }
+                            context.startActivity(Intent.createChooser(sendIntent, "مشاركة الحديث"))
+                        }) {
                             Icon(Icons.Default.Share, contentDescription = "Share", tint = GreenPrimaryLight, modifier = Modifier.size(20.dp))
-                        }
-                        IconButton(onClick = { /* Copy */ }, modifier = Modifier.size(36.dp)) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = GreenPrimaryLight, modifier = Modifier.size(20.dp))
-                        }
-                        IconButton(onClick = { /* Bookmark */ }, modifier = Modifier.size(36.dp)) {
-                            Icon(Icons.Default.BookmarkBorder, contentDescription = "Bookmark", tint = GreenPrimaryLight, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
 
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // The Hadith Text
+                Text(
+                    text = hadith?.text ?: "جاري التحميل...",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontFamily = com.example.quranapp.presentation.ui.theme.ScheherazadeNew,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 36.sp,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                HorizontalDivider(
+                    modifier = Modifier.fillMaxWidth(0.6f).align(Alignment.CenterHorizontally),
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                )
+
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = "«ربنا ولك الحمد ملء السماوات والأرض، وملء ما شئت من شيء بعد...»",
-                    style = MaterialTheme.typography.bodyLarge,
-                    lineHeight = 24.sp
-                )
+                // Source Info
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "الراوي : ${hadith?.narrator ?: "غير متوفر"}",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = GreenPrimaryLight
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "المصدر : ${hadith?.source ?: ""}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
             }
         }
     }

@@ -87,9 +87,8 @@ fun AdhkarListScreen(
                 // Refresh/Reset Button (Left in Arabic)
                 Surface(
                     shape = CircleShape,
-                    color = Color.Transparent,
-                    border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.5f)),
-                    modifier = Modifier.size(40.dp)
+                    color = Color(0xFFC9A24D).copy(alpha = 0.1f),
+                    modifier = Modifier.size(44.dp)
                 ) {
                     IconButton(onClick = { showResetDialog = true }) {
                         Icon(
@@ -197,9 +196,10 @@ fun AdhkarListScreen(
 @Composable
 fun AdhkarCategoryCard(category: AdhkarCategory, navController: NavController) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = GreenPrimaryLight.copy(alpha = 0.05f),
-        border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.3f)),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 5.dp,
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f)),
         modifier = Modifier
             .fillMaxWidth()
             .clickable { navController.navigate(Screen.AdhkarDetail.createRoute(category.id)) }
@@ -207,39 +207,39 @@ fun AdhkarCategoryCard(category: AdhkarCategory, navController: NavController) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Right Side: Progress Circle (Starts on Right in RTL)
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.size(60.dp)
+                modifier = Modifier.size(64.dp)
             ) {
+                // Soft gold background for the progress circle
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFFC9A24D).copy(alpha = 0.1f),
+                    modifier = Modifier.fillMaxSize()
+                ) {}
                 CircularProgressIndicator(
                     progress = { category.progress.toFloat() / category.total.toFloat() },
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize(0.85f),
                     color = GreenPrimaryLight,
-                    trackColor = GreenPrimaryLight.copy(alpha = 0.2f),
+                    trackColor = GreenPrimaryLight.copy(alpha = 0.15f),
                     strokeWidth = 4.dp
                 )
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "${category.progress}/${category.total}",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = GreenPrimaryLight
-                    )
-                    Text(
-                        text = "قراءة اليوم",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = 8.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(20.dp))
 
             // Middle: Text Content
             Column(
@@ -248,7 +248,8 @@ fun AdhkarCategoryCard(category: AdhkarCategory, navController: NavController) {
             ) {
                 Text(
                     text = category.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontFamily = com.example.quranapp.presentation.ui.theme.ScheherazadeNew,
                     fontWeight = FontWeight.Bold,
                     color = GreenPrimaryLight
                 )
@@ -256,26 +257,22 @@ fun AdhkarCategoryCard(category: AdhkarCategory, navController: NavController) {
                 Text(
                     text = category.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Start
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Start,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
             // Left Side: Navigation Arrow (Ends on Left in RTL)
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft, // Points Left in design
-                    contentDescription = "Enter",
-                    tint = Color.White,
-                    modifier = Modifier.padding(6.dp)
-                )
-            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft, // Points Left in design
+                contentDescription = "Enter",
+                tint = Color(0xFFC9A24D),
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }

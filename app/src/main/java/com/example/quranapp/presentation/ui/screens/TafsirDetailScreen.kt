@@ -28,21 +28,41 @@ import androidx.navigation.NavController
 import com.example.quranapp.presentation.ui.theme.spacing
 import com.example.quranapp.presentation.ui.theme.GreenPrimaryLight
 
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.quranapp.presentation.viewmodel.TafsirDetailViewModel
+import androidx.compose.material.icons.filled.Bookmark
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TafsirDetailScreen(
     navController: NavController,
-    surahName: String = "سُورَةُ الْفَاتِحَةِ"
+    surahName: String = "سُورَةُ الْفَاتِحَةِ",
+    surahNumber: Int = 1,
+    viewModel: TafsirDetailViewModel = hiltViewModel()
 ) {
     val spacing = MaterialTheme.spacing
     val scrollState = rememberScrollState()
     
+    val isBookmarked by viewModel.isBookmarked.collectAsState()
+    val tafsirTextList by viewModel.tafsirTextList.collectAsState()
+    val isLoading by viewModel.isLoadingTafsir.collectAsState()
+    val errorMessage by viewModel.tafsirError.collectAsState()
+
+    LaunchedEffect(surahNumber) {
+        viewModel.checkIfBookmarked(surahNumber)
+        viewModel.loadTafsir(surahNumber)
+    }
+
     val tabs = listOf(
-        "المعنى الإجمالي",
-        "تفسير الآيات",
-        "الفوائد التربوية"
+        "تفسير الجلالين",
+        "تفسير الميسر"
     )
     var selectedTabIndex by remember { mutableStateOf(0) }
+
+    LaunchedEffect(selectedTabIndex) {
+        val edition = if (selectedTabIndex == 0) "ar.jalalayn" else "ar.muyassar"
+        viewModel.loadTafsir(surahNumber, edition)
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -62,15 +82,20 @@ fun TafsirDetailScreen(
             ) {
                 // Action Buttons (Left in LTR, Right visually if RTL mirror applied, wait, design has them on Left)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val context = androidx.compose.ui.platform.LocalContext.current
                     // Bookmark
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.5f)),
+                        color = if (isBookmarked) GreenPrimaryLight else MaterialTheme.colorScheme.surface,
+                        border = if (isBookmarked) null else BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.5f)),
                         modifier = Modifier.size(40.dp)
                     ) {
-                        IconButton(onClick = { /* TODO */ }) {
-                            Icon(imageVector = Icons.Default.BookmarkBorder, contentDescription = "Bookmark", tint = GreenPrimaryLight)
+                        IconButton(onClick = { viewModel.toggleBookmark(surahName) }) {
+                            Icon(
+                                imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                contentDescription = "Bookmark",
+                                tint = if (isBookmarked) MaterialTheme.colorScheme.surface else GreenPrimaryLight
+                            )
                         }
                     }
                     // Share
@@ -80,7 +105,15 @@ fun TafsirDetailScreen(
                         border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.5f)),
                         modifier = Modifier.size(40.dp)
                     ) {
-                        IconButton(onClick = { /* TODO */ }) {
+                        IconButton(onClick = { 
+                            val shareText = "اقرأ تفسير سورة $surahName عبر تطبيق زاد مسلم"
+                            val sendIntent = android.content.Intent().apply {
+                                action = android.content.Intent.ACTION_SEND
+                                putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                                type = "text/plain"
+                            }
+                            context.startActivity(android.content.Intent.createChooser(sendIntent, "مشاركة التفسير"))
+                        }) {
                             Icon(imageVector = Icons.Default.Share, contentDescription = "Share", tint = GreenPrimaryLight)
                         }
                     }
@@ -205,38 +238,31 @@ fun TafsirDetailScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Dynamic Content based on selected tab
-                when (selectedTabIndex) {
-                    0 -> { // المعنى الإجمالي
-                        Text(
-                            text = "يخبر الله تعالى عباده بأن الحمد الكامل مستحق له وحده، ويرشدهم بما أخبر إلى أن يثنوا عليه، ويمجدوه، ويحمدوه بجميع المحامد التي لا يستحقها إلا هو، ذو الرحمة والملك، كما يرشدهم سبحانه إلى إفراده بالعبادة والاستعانة، وطلب الهداية منه وحده للطريق الواضحة التي لا اعوجاج فيها؛ طريق الذين أنعم الله عليهم، لا طريق اليهود المغضوب عليهم، ولا طريق النصارى الضالين.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            lineHeight = 28.sp,
-                            textAlign = TextAlign.End,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f),
-                            modifier = Modifier.padding(bottom = 32.dp)
-                        )
-                    }
-                    1 -> { // تفسير الآيات
-                        // Mock data for Ayah Tafsir
-                        val ayahTafsirs = listOf(
-                            Pair("الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ ﴿١﴾", "هذا خبَرٌ من الله عزَّ وجلَّ فيه حمد نفسه الكريمة، وفي ضمنه إرشاد لعباده بأن يحمدوه سبحانه وتعالى."),
-                            Pair("الْحَمْدُ لِلَّهِ", "أي: جميع المحامد للمعبود تبارك وتعالى، لا يستحقها إلا هو وحده سبحانه، وهو حمد دائم ومستمر.")
-                        )
-                        
-                        ayahTafsirs.forEach { (ayahText, tafsirText) ->
-                            AyahTafsirItem(ayahText = ayahText, tafsirText = tafsirText)
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-                    }
-                    2 -> { // الفوائد التربوية
-                        Text(
-                            text = "من الفوائد التربوية لسورة الفاتحة:\n1. أهمية البدء باسم الله في كل عمل.\n2. الإقرار بربوبية الله الشاملة لجميع المخلوقات.\n3. تذكر يوم الحساب للاستعداد له بالعمل الصالح.\n4. إخلاص العبادة والاستعانة لله وحده.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            lineHeight = 28.sp,
-                            textAlign = TextAlign.End,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f),
-                            modifier = Modifier.padding(bottom = 32.dp)
-                        )
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentWidth(Alignment.CenterHorizontally),
+                        color = GreenPrimaryLight
+                    )
+                } else if (errorMessage != null) {
+                    Text(
+                        text = "Error: $errorMessage",
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                } else if (tafsirTextList.isEmpty()) {
+                    Text(
+                        text = "لا يتوفر تفسير حالياً",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                } else {
+                    tafsirTextList.forEach { tafsir ->
+                        AyahTafsirItem(ayahText = "الآية ${tafsir.ayahNumber}", tafsirText = tafsir.text)
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }

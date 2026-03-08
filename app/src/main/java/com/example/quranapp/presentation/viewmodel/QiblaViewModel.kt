@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.example.quranapp.domain.location.LocationTracker
 import com.example.quranapp.domain.qibla.QiblaTracker
+import kotlinx.coroutines.flow.catch
 import kotlin.math.*
 
 @HiltViewModel
@@ -28,8 +29,24 @@ class QiblaViewModel @Inject constructor(
     private val _qiblaAngle = MutableStateFlow(0f)
     val qiblaAngle: StateFlow<Float> = _qiblaAngle.asStateFlow()
 
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
     init {
+        fetchLocationAndStartTracking()
+    }
+    
+    fun refreshLocation() {
+        fetchLocationAndStartTracking()
+    }
+    
+    private fun fetchLocationAndStartTracking() {
         viewModelScope.launch { 
+            _isLoading.value = true
+            _error.value = null 
             // 1. Get User Location
             val location = locationTracker.getCurrentLocation()
             if (location != null) {
@@ -56,15 +73,22 @@ class QiblaViewModel @Inject constructor(
                 val a = sin(dLat / 2) * sin(dLat / 2) + cos(lat1) * cos(lat2) * sin(dLng / 2) * sin(dLng / 2)
                 val c = 2 * atan2(sqrt(a), sqrt(1 - a))
                 _distance.value = (r * c).toInt()
+                _isLoading.value = false
+            } else {
+                _isLoading.value = false
+                _error.value = "لم نتمكن من تحديد الموقع. تأكد من تفعيل الـ GPS وصلاحيات الموقع."
             }
             
             // 2. Start tracking device orientation and combine with qibla angle
-            qiblaTracker.startTracking().collect { azimuth ->
-                // The compass view needs to rotate negatively.
-                // The Kaaba arrow points to the _qiblaAngle relative to North.
-                // Right now we just pass azimuth, we'll reconcile in UI.
-                _direction.value = azimuth
-            }
+            qiblaTracker.startTracking()
+                .catch { e -> 
+                    _error.value = "عطل في المستشعر المضبوط: ${e.message}"
+                }
+                .collect { azimuth ->
+                    // The compass view needs to rotate negatively.
+                    // The Kaaba arrow points to the _qiblaAngle relative to North.
+                    _direction.value = azimuth
+                }
         }
     }
 }

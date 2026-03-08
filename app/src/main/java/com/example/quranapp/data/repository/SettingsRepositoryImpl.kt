@@ -6,6 +6,7 @@ import com.example.quranapp.data.local.mapper.toEntity
 import com.example.quranapp.domain.model.AppSettings
 import com.example.quranapp.domain.model.FontFamily
 import com.example.quranapp.domain.model.ThemeMode
+import com.example.quranapp.domain.model.AdhanPreference
 import com.example.quranapp.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -56,6 +57,20 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun updateSelectedReciter(reciterId: String) {
         val current = getSettings()
         saveSettings(current.copy(selectedReciter = reciterId))
+    }
+    
+    override suspend fun updateAdhanPreference(prayerId: Int, preference: AdhanPreference) {
+        val current = getSettings()
+        val updated = when (prayerId) {
+            1 -> current.copy(fajrPreference = preference)
+            2 -> current.copy(sunrisePreference = preference)
+            3 -> current.copy(dhuhrPreference = preference)
+            4 -> current.copy(asrPreference = preference)
+            5 -> current.copy(maghribPreference = preference)
+            6 -> current.copy(ishaPreference = preference)
+            else -> current
+        }
+        saveSettings(updated)
     }
     
     override suspend fun clearCache() {

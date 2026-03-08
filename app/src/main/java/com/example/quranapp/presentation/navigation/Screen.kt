@@ -14,6 +14,7 @@ sealed class Screen(val route: String) {
     }
     object AudioPlayer : Screen("audio_player")
     object PrayerTimes : Screen("prayer_times")
+    object DailyTasks : Screen("daily_tasks")
     object Qibla : Screen("qibla")
     object Favorites : Screen("favorites")
     object Search : Screen("search")

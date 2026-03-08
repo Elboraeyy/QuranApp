@@ -19,6 +19,9 @@ interface QuranApi {
     @GET("surah/{id}/ar.alafasy")
     suspend fun getSurahWithAudio(@Path("id") surahId: Int): SurahDetailResponse
 
+    @GET("surah/{id}/{tafsir_edition}")
+    suspend fun getSurahTafsir(@Path("id") surahId: Int, @Path("tafsir_edition") edition: String = "ar.jalalayn"): SurahDetailResponse
+
     @GET("quran/quran-uthmani")
     suspend fun getFullQuran(): FullQuranResponse
 }

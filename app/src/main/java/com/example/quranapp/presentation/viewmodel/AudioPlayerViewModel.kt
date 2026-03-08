@@ -10,42 +10,64 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
+import androidx.lifecycle.viewModelScope
+// Keep existing imports...
+import com.example.quranapp.domain.manager.AudioPlayerManager
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+
 @HiltViewModel
 class AudioPlayerViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val audioRepository: AudioRepository,
+    private val audioPlayerManager: AudioPlayerManager,
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
-    private val player: ExoPlayer = ExoPlayer.Builder(context).build()
+    val isPlaying: StateFlow<Boolean> = audioPlayerManager.isPlaying
+    val currentPosition: StateFlow<Long> = audioPlayerManager.currentPosition
+    val duration: StateFlow<Long> = audioPlayerManager.duration
+    val currentSurah: StateFlow<Int> = audioPlayerManager.currentSurah
 
-    private var currentSurah = 1
+    fun playSurah(surahNumber: Int) {
+        viewModelScope.launch {
+            val reciterId = settingsRepository.getSettings().selectedReciter
+            audioPlayerManager.playSurah(reciterId, surahNumber)
+        }
+    }
+    
+    // To play the currently selected surah from zero
+    fun playCurrent() {
+        viewModelScope.launch {
+            val reciterId = settingsRepository.getSettings().selectedReciter
+            audioPlayerManager.playSurah(reciterId, currentSurah.value)
+        }
+    }
 
-    suspend fun playCurrent() {
-        val reciterId = settingsRepository.getSettings().selectedReciter
-        val url = audioRepository.getAudioUrl(reciterId, currentSurah)
-        val mediaItem = MediaItem.fromUri(url)
-        player.setMediaItem(mediaItem)
-        player.prepare()
-        player.play()
+    fun resume() {
+        audioPlayerManager.play()
     }
 
     fun pause() {
-        player.pause()
+        audioPlayerManager.pause()
     }
 
-    suspend fun next() {
-        currentSurah = (currentSurah % 114) + 1
-        playCurrent()
+    fun seekTo(positionMs: Long) {
+        audioPlayerManager.seekTo(positionMs)
     }
 
-    suspend fun previous() {
-        currentSurah = if (currentSurah == 1) 114 else currentSurah - 1
-        playCurrent()
+    fun next() {
+        viewModelScope.launch {
+            audioPlayerManager.next()
+        }
+    }
+
+    fun previous() {
+        viewModelScope.launch {
+            audioPlayerManager.previous()
+        }
     }
 
     override fun onCleared() {
         super.onCleared()
-        player.release()
+        // We don't release the player here anymore because the Service will manage its lifecyle.
     }
 }

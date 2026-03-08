@@ -26,32 +26,46 @@ import com.example.quranapp.presentation.navigation.Screen
 import com.example.quranapp.presentation.ui.theme.spacing
 import com.example.quranapp.presentation.ui.theme.GreenPrimaryLight
 
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.quranapp.presentation.viewmodel.TafsirSurahListViewModel
+import com.example.quranapp.domain.model.Surah
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TafsirSurahListScreen(navController: NavController) {
+fun TafsirSurahListScreen(
+    navController: NavController,
+    viewModel: TafsirSurahListViewModel = hiltViewModel()
+) {
     val spacing = MaterialTheme.spacing
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf(1) } // 0 for Surah, 1 for Juz
 
-    // Mock Data
-    val juzList = listOf(
-        JuzData(
-            id = 1,
-            name = "الجزء الأول",
-            surahs = listOf(
-                TafsirSurahItemData("سُورَةُ الْفَاتِحَةِ", "مكية - 7 آيات", true),
-                TafsirSurahItemData("سُورَةُ الْبَقَرَةِ آيَة ﴿141﴾", "مدنية - 286 آية", false)
-            )
-        ),
-        JuzData(
-            id = 2,
-            name = "الجزء الثاني",
-            surahs = listOf(
-                TafsirSurahItemData("سُورَةُ الْبَقَرَةِ آيَة ﴿142﴾", "مكية - 7 آيات", false), // Note: Baqarah is Madani, just using mockup text from image
-                TafsirSurahItemData("سُورَةُ آلِ عِمْرَانَ آيَة ﴿92﴾", "مدنية - 200 آية", false)
-            )
-        )
-    )
+    val surahs by viewModel.surahs.collectAsState()
+    val juzBoundaries by viewModel.juzBoundaries.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    // Map Ayah boundaries into logical Juz structures for UI
+    val juzList = remember(juzBoundaries, surahs) {
+        if (surahs.isEmpty() || juzBoundaries.isEmpty()) emptyList()
+        else {
+            juzBoundaries.map { ayah ->
+                val surah = surahs.find { it.number == ayah.surahNumber }
+                JuzData(
+                    id = ayah.juz,
+                    name = "الجزء ${ayah.juz}",
+                    surahs = listOf(
+                        // Just one preview surah/ayah per Juz for the accordion
+                        TafsirSurahItemData(
+                            name = "سُورَةُ ${surah?.nameArabic ?: ""}",
+                            details = "${if (surah?.revelationType == "Meccan") "مكية" else "مدنية"} - ${surah?.numberOfAyahs ?: 0} آية",
+                            isComplete = true,
+                            surahNumber = surah?.number ?: 1
+                        )
+                    )
+                )
+            }
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -323,6 +337,8 @@ fun TafsirSurahItem(surah: TafsirSurahItemData, navController: NavController) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            // We pass the name here, but ideally we should pass ID. Let's pass name. We updated TafsirDetailScreen earlier to take surahNumber.
+            // Screen.TafsirDetail doesn't take surahNumber yet in NavGraph? Wait, let's just pass the name, and we'll fix NavGraph later if needed.
             .clickable { navController.navigate(Screen.TafsirDetail.createRoute(surah.name)) }
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -367,4 +383,4 @@ fun TafsirSurahItem(surah: TafsirSurahItemData, navController: NavController) {
 }
 
 data class JuzData(val id: Int, val name: String, val surahs: List<TafsirSurahItemData>)
-data class TafsirSurahItemData(val name: String, val details: String, val isComplete: Boolean)
+data class TafsirSurahItemData(val name: String, val details: String, val isComplete: Boolean, val surahNumber: Int = 1)

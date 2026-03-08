@@ -17,6 +17,14 @@ data class SettingsEntity(
     val appLanguage: String = "ENGLISH",
     val enableNotifications: Boolean = true,
     val enableAthan: Boolean = true,
-    val calculationMethod: Int = 1
+    val calculationMethod: Int = 1,
+    val fajrPreference: String = "ADHAN",
+    val sunrisePreference: String = "NONE",
+    val dhuhrPreference: String = "ADHAN",
+    val asrPreference: String = "ADHAN",
+    val maghribPreference: String = "ADHAN",
+    val ishaPreference: String = "ADHAN",
+    val totalTasbihCount: Int = 0,
+    val selectedTasbihPhraseId: Int = 1
 )
 

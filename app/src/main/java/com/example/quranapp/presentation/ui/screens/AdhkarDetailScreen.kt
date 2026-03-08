@@ -119,9 +119,8 @@ fun AdhkarDetailScreen(
                 // Refresh Button (Left in Arabic)
                 Surface(
                     shape = CircleShape,
-                    color = Color.Transparent,
-                    border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.5f)),
-                    modifier = Modifier.size(40.dp)
+                    color = Color(0xFFC9A24D).copy(alpha = 0.1f),
+                    modifier = Modifier.size(44.dp)
                 ) {
                     IconButton(onClick = { showResetDialog = true }) {
                         Icon(
@@ -203,9 +202,10 @@ fun AdhkarDetailScreen(
                             val pageItem = items[page]
                             // Dhikr Card
                             Surface(
-                                shape = RoundedCornerShape(24.dp),
+                                shape = RoundedCornerShape(32.dp),
                                 color = MaterialTheme.colorScheme.surface,
-                                shadowElevation = 4.dp,
+                                shadowElevation = 8.dp,
+                                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f)),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .heightIn(max = 700.dp)
@@ -215,24 +215,20 @@ fun AdhkarDetailScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .verticalScroll(rememberScrollState())
-                                        .padding(24.dp),
+                                        .padding(32.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     // Decorative Icon (Rosary/Misbaha)
                                     Surface(
                                         shape = CircleShape,
-                                        color = GreenPrimaryLight.copy(alpha = 0.1f),
-                                        border = BorderStroke(
-                                            1.dp,
-                                            GreenPrimaryLight.copy(alpha = 0.3f)
-                                        ),
-                                        modifier = Modifier.size(56.dp)
+                                        color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+                                        modifier = Modifier.size(64.dp)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.TouchApp,
                                             contentDescription = null,
-                                            tint = GreenPrimaryLight,
-                                            modifier = Modifier.padding(12.dp)
+                                            tint = Color(0xFFC9A24D),
+                                            modifier = Modifier.padding(16.dp)
                                         )
                                     }
 
@@ -307,8 +303,10 @@ fun AdhkarDetailScreen(
                                             Text(
                                                 text = pageItem.text,
                                                 style = MaterialTheme.typography.headlineSmall.copy(
+                                                    fontFamily = ScheherazadeNew,
                                                     lineHeight = dynamicLineHeight,
-                                                    fontSize = dynamicFontSize
+                                                    fontSize = dynamicFontSize,
+                                                    fontWeight = FontWeight.Medium
                                                 ),
                                                 textAlign = TextAlign.Center,
                                                 color = MaterialTheme.colorScheme.onSurface,
@@ -343,30 +341,22 @@ fun AdhkarDetailScreen(
                                         val isFavorite by viewModel.observeIsFavorite(pageItem.id).collectAsState(initial = false)
 
                                         Surface(
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = Color.Transparent,
-                                            border = BorderStroke(
-                                                1.dp,
-                                                MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                                            ),
-                                            modifier = Modifier.size(36.dp),
+                                            shape = CircleShape,
+                                            color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+                                            modifier = Modifier.size(44.dp),
                                             onClick = { viewModel.toggleFavorite(pageItem.id) }
                                         ) {
                                             Icon(
                                                 imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                                                 contentDescription = "Bookmark",
-                                                tint = if (isFavorite) GreenPrimaryLight else MaterialTheme.colorScheme.secondary,
-                                                modifier = Modifier.padding(6.dp)
+                                                tint = GreenPrimaryLight,
+                                                modifier = Modifier.padding(10.dp)
                                             )
                                         }
                                         Surface(
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = Color.Transparent,
-                                            border = BorderStroke(
-                                                1.dp,
-                                                MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                                            ),
-                                            modifier = Modifier.size(36.dp),
+                                            shape = CircleShape,
+                                            color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+                                            modifier = Modifier.size(44.dp),
                                             onClick = {
                                                 dhikrToCapture = pageItem
                                             }
@@ -374,8 +364,8 @@ fun AdhkarDetailScreen(
                                             Icon(
                                                 imageVector = Icons.Default.Share,
                                                 contentDescription = "Share",
-                                                tint = MaterialTheme.colorScheme.secondary,
-                                                modifier = Modifier.padding(6.dp)
+                                                tint = GreenPrimaryLight,
+                                                modifier = Modifier.padding(10.dp)
                                             )
                                         }
                                     }
@@ -405,10 +395,8 @@ fun AdhkarDetailScreen(
                     Box(modifier = Modifier.align(Alignment.CenterStart)) {
                         Surface(
                             shape = CircleShape,
-                            color = if (pagerState.currentPage > 0) MaterialTheme.colorScheme.secondary else Color.LightGray.copy(
-                                alpha = 0.3f
-                            ),
-                            modifier = Modifier.size(40.dp)
+                            color = if (pagerState.currentPage > 0) Color(0xFFC9A24D).copy(alpha = 0.15f) else Color.Transparent,
+                            modifier = Modifier.size(44.dp)
                         ) {
                             IconButton(
                                 onClick = {
@@ -423,7 +411,7 @@ fun AdhkarDetailScreen(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Previous",
-                                    tint = Color.White
+                                    tint = if (pagerState.currentPage > 0) GreenPrimaryLight else Color.Transparent
                                 )
                             }
                         }
@@ -499,10 +487,8 @@ fun AdhkarDetailScreen(
                     Box(modifier = Modifier.align(Alignment.CenterEnd)) {
                             Surface(
                                 shape = CircleShape,
-                                color = if (pagerState.currentPage < items.size - 1) MaterialTheme.colorScheme.secondary else Color.LightGray.copy(
-                                    alpha = 0.3f
-                                ),
-                                modifier = Modifier.size(40.dp)
+                                color = if (pagerState.currentPage < items.size - 1) Color(0xFFC9A24D).copy(alpha = 0.15f) else Color.Transparent,
+                                modifier = Modifier.size(44.dp)
                             ) {
                                 IconButton(
                                     onClick = {
@@ -517,12 +503,12 @@ fun AdhkarDetailScreen(
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                         contentDescription = "Next",
-                                        tint = Color.White
+                                        tint = if (pagerState.currentPage < items.size - 1) GreenPrimaryLight else Color.Transparent
                                     )
                                 }
                             }
-                        }
-
+                    }    
+                            
                         Spacer(modifier = Modifier.height(24.dp))
                     }
                 }

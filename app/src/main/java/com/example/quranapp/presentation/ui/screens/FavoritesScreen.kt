@@ -29,25 +29,14 @@ import com.example.quranapp.presentation.ui.theme.GreenPrimaryLight
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FavoritesScreen(navController: NavController) {
+fun FavoritesScreen(navController: NavController, viewModel: com.example.quranapp.presentation.viewmodel.FavoritesViewModel = androidx.hilt.navigation.compose.hiltViewModel()) {
     val spacing = MaterialTheme.spacing
     
     val tabs = listOf("الأذكار", "القرآن الكريم", "التفسير و المعاني")
     var selectedTabIndex by remember { mutableStateOf(0) }
 
-    // Mock Data for Adhkar
-    val savedAdhkar = listOf(
-        SavedDhikrData(
-            id = 1,
-            text = "اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ ۚ لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ ۚ لَّهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ مَن ذَا الَّذِي يَشْفَعُ عِندَهُ إِلَّا بِإِذْنِهِ",
-            count = 3
-        ),
-        SavedDhikrData(
-            id = 2,
-            text = "اللَّهُمَّ إِنِّي أَسْأَلُكَ خَيْرَ هَذَا الْيَوْمِ فَتْحَهُ، وَنَصْرَهُ، وَنُورَهُ، وَبَرَكَتَهُ، وَهُدَاهُ، وَأَعُوذُ بِكَ مِنْ شَرِّ مَا فِيهِ وَشَرِّ مَا بَعْدَهُ",
-            count = 1
-        )
-    )
+    val allFavorites by viewModel.favorites.collectAsState()
+    val savedAdhkar = allFavorites.filter { it.type == com.example.quranapp.domain.model.FavoriteType.ADHKAR }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -68,15 +57,15 @@ fun FavoritesScreen(navController: NavController) {
                 // Search Button (Left)
                 Surface(
                     shape = CircleShape,
-                    color = Color.Transparent,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha=0.3f)),
-                    modifier = Modifier.size(40.dp)
+                    color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+                    modifier = Modifier.size(44.dp)
                 ) {
                     IconButton(onClick = { /* Search Action */ }) {
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "Search",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            tint = GreenPrimaryLight,
+                            modifier = Modifier.padding(2.dp)
                         )
                     }
                 }
@@ -91,14 +80,14 @@ fun FavoritesScreen(navController: NavController) {
                 // Back Button (Right in design)
                 Surface(
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.size(40.dp)
+                    color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+                    modifier = Modifier.size(44.dp)
                 ) {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            tint = GreenPrimaryLight
                         )
                     }
                 }
@@ -116,7 +105,7 @@ fun FavoritesScreen(navController: NavController) {
                 tabs.forEachIndexed { index, title ->
                     val isSelected = selectedTabIndex == index
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(32.dp),
                         color = if (isSelected) GreenPrimaryLight else MaterialTheme.colorScheme.surface,
                         border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha=0.1f)),
                         modifier = Modifier.weight(1f),
@@ -141,15 +130,27 @@ fun FavoritesScreen(navController: NavController) {
             // Content Area depending on Tab
             if (selectedTabIndex == 0) {
                 // Adhkar List
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = spacing.gridMargin),
-                    contentPadding = PaddingValues(bottom = 32.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(savedAdhkar) { dhikr ->
-                        SavedDhikrCard(dhikr = dhikr)
+                if (savedAdhkar.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "لا توجد أذكار محفوظة",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = spacing.gridMargin),
+                        contentPadding = PaddingValues(bottom = 32.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(savedAdhkar) { favorite ->
+                            // Here we ideally need to fetch the actual Adhkar text by ID.
+                            // For now, we will use a generic text if we don't have the Adhkar name directly.
+                            SavedFavoriteCard(favorite = favorite, onRemove = { viewModel.removeFavorite(favorite) })
+                        }
                     }
                 }
             } else {
@@ -167,96 +168,74 @@ fun FavoritesScreen(navController: NavController) {
 }
 
 @Composable
-fun SavedDhikrCard(dhikr: SavedDhikrData) {
+fun SavedFavoriteCard(favorite: com.example.quranapp.domain.model.Favorite, onRemove: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(32.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
-        shadowElevation = 2.dp,
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f)),
+        shadowElevation = 8.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Top Icon (Rosary inside green circle)
             Surface(
                 shape = CircleShape,
-                color = GreenPrimaryLight.copy(alpha = 0.1f),
-                border = BorderStroke(1.dp, GreenPrimaryLight),
-                modifier = Modifier.size(56.dp)
+                color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+                modifier = Modifier.size(64.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.TouchApp, // Placeholder for Rosary
                     contentDescription = null,
-                    tint = GreenPrimaryLight,
-                    modifier = Modifier.padding(12.dp)
+                    tint = Color(0xFFC9A24D),
+                    modifier = Modifier.padding(16.dp)
                 )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Dhikr Text
+            // Text
             Text(
-                text = dhikr.text,
+                text = "ذكر رقم ${favorite.adhkarId}", // Placeholder until we load actual adhkar text
                 style = MaterialTheme.typography.headlineSmall, // Quranic/Arabic Script feel
+                fontFamily = com.example.quranapp.presentation.ui.theme.ScheherazadeNew,
                 lineHeight = 36.sp,
+                fontSize = 24.sp,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Bottom Actions & Count
+            // Bottom Actions
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Actions (Bookmark filled, Share)
+                // Actions (Remove Bookmark, Share)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.size(36.dp)
+                        shape = CircleShape,
+                        color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+                        modifier = Modifier.size(44.dp),
+                        onClick = onRemove
                     ) {
-                        Icon(imageVector = Icons.Default.Bookmark, contentDescription = "Saved", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(6.dp))
+                        Icon(imageVector = Icons.Default.Bookmark, contentDescription = "Remove Saved", tint = GreenPrimaryLight, modifier = Modifier.padding(10.dp))
                     }
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color.Transparent,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha=0.2f)),
-                        modifier = Modifier.size(36.dp)
+                        shape = CircleShape,
+                        color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+                        modifier = Modifier.size(44.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.Share, contentDescription = "Share", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(6.dp))
+                        Icon(imageVector = Icons.Default.Share, contentDescription = "Share", tint = GreenPrimaryLight, modifier = Modifier.padding(10.dp))
                     }
-                }
-
-                // Times Count
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "${dhikr.count} مرات",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(
-                        imageVector = Icons.Default.TouchApp,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        modifier = Modifier.size(18.dp)
-                    )
                 }
             }
         }
     }
 }
-
-data class SavedDhikrData(
-    val id: Int,
-    val text: String,
-    val count: Int
-)

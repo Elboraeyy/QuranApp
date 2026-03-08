@@ -7,6 +7,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.quranapp.presentation.ui.screens.*
+import com.example.quranapp.presentation.ui.screens.TasbihScreen
 
 @Composable
 fun SetupNavGraph(navController: NavHostController) {
@@ -58,6 +59,9 @@ fun SetupNavGraph(navController: NavHostController) {
         }
         composable(Screen.PrayerTimes.route) {
             PrayerTimesScreen(navController = navController)
+        }
+        composable(Screen.DailyTasks.route) {
+            DailyTasksScreen(navController = navController)
         }
         composable(Screen.Qibla.route) {
             QiblaScreen(navController = navController)

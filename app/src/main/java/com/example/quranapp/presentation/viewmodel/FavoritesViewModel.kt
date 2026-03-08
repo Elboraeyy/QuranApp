@@ -20,6 +20,26 @@ class FavoritesViewModel @Inject constructor(
     val favorites: StateFlow<List<Favorite>> = _favorites.asStateFlow()
 
     init {
-        viewModelScope.launch { _favorites.value = repository.getAllFavorites() }
+        loadFavorites()
+    }
+
+    private fun loadFavorites() {
+        viewModelScope.launch {
+            _favorites.value = repository.getAllFavorites()
+        }
+    }
+
+    fun addFavorite(favorite: Favorite) {
+        viewModelScope.launch {
+            repository.addFavorite(favorite)
+            loadFavorites() // Reload list
+        }
+    }
+
+    fun removeFavorite(favorite: Favorite) {
+        viewModelScope.launch {
+            repository.deleteFavorite(favorite)
+            loadFavorites() // Reload list
+        }
     }
 }

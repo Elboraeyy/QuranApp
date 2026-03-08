@@ -1,6 +1,7 @@
 package com.example.quranapp.presentation.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.quranapp.presentation.navigation.Screen
 import com.example.quranapp.presentation.ui.theme.spacing
@@ -115,11 +117,11 @@ fun QuranIndexScreen(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
                     modifier = Modifier.size(40.dp)
                 ) {
-                    IconButton(onClick = { /* TODO: Open Search */ }) {
+                    IconButton(onClick = { navController.navigate(Screen.Search.route) }) {
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "Search",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            tint = GreenPrimaryLight
                         )
                     }
                 }
@@ -281,9 +283,10 @@ fun QuranTabItem(title: String, count: String, isSelected: Boolean, onClick: () 
 @Composable
 fun QuranSurahItem(surah: Surah, navController: NavController) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
+        shadowElevation = 4.dp, // Soft elegant shadow
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f)),
         modifier = Modifier
             .fillMaxWidth()
             .clickable { navController.navigate(Screen.QuranReading.createRoute(surah.number)) }
@@ -291,56 +294,81 @@ fun QuranSurahItem(surah: Surah, navController: NavController) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 20.dp, vertical = 20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Right Side (Surah Info & Icon) - Starts on Right in RTL
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Decorative Box with number
+                // Diagonal elegant Box with number
                 Box(
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(48.dp),
                     contentAlignment = Alignment.Center
                 ) {
+                    // Soft background circle
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = GreenPrimaryLight.copy(alpha = 0.1f),
+                        shape = CircleShape,
+                        color = Color(0xFFC9A24D).copy(alpha = 0.15f), // Soft gold background
                         modifier = Modifier.fillMaxSize()
                     ) {}
+                    // Inner rotated diamond or secondary circle
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color.Transparent,
+                        border = BorderStroke(1.dp, Color(0xFFC9A24D).copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxSize(0.7f)
+                    ) {}
+                    
                     Text(
                         text = surah.number.toString(),
                         style = MaterialTheme.typography.titleMedium,
-                        color = GreenPrimaryLight,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(20.dp))
                 Column(horizontalAlignment = Alignment.Start) {
                     Text(
                         text = "سُورَةُ ${surah.nameArabic}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleLarge,
+                        fontFamily = com.example.quranapp.presentation.ui.theme.ScheherazadeNew,
+                        fontWeight = FontWeight.Bold,
+                        color = GreenPrimaryLight
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "${if (surah.revelationType == "Meccan") "مكية" else "مدنية"} - ${surah.numberOfAyahs} آية",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = if (surah.revelationType == "Meccan") "مَكِّيَّة" else "مَدَنِيَّة",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 6.dp)
+                                .size(4.dp)
+                                .background(Color(0xFFC9A24D), CircleShape)
+                        )
+                        Text(
+                            text = "${surah.numberOfAyahs} آيات",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
                 }
             }
 
-            // Left Side (Arrow) - Ends on Left in RTL
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = Color.Transparent,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = "Open Surah",
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                    modifier = Modifier.padding(8.dp).size(20.dp)
+            // Left Side (English Name or Arrow)
+            Column(horizontalAlignment = Alignment.End) {
+                 Text(
+                    text = surah.nameEnglish,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = GreenPrimaryLight.copy(alpha = 0.7f)
+                )
+                 Text(
+                    text = surah.englishNameTranslation,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                 )
             }
         }
@@ -349,12 +377,13 @@ fun QuranSurahItem(surah: Surah, navController: NavController) {
 
 @Composable
 fun QuranJuzAccordion(juz: QuranJuzData, navController: NavController) {
-    var expanded by remember { mutableStateOf(juz.id == 1) } // First one expanded by default
+    var expanded by remember { mutableStateOf(juz.id == 1) }
 
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
+        shadowElevation = if (expanded) 6.dp else 2.dp, // Dynamic elevation
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -363,63 +392,68 @@ fun QuranJuzAccordion(juz: QuranJuzData, navController: NavController) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { expanded = !expanded }
-                    .padding(16.dp),
+                    .padding(20.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Right Side: Title & Number (Starts on Right in RTL)
+                // Right Side: Number & Title
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        modifier = Modifier.size(36.dp),
+                        modifier = Modifier.size(44.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Surface(
                             shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, Color(0xFFC9A24D).copy(alpha = 0.3f)),
+                            color = GreenPrimaryLight.copy(alpha = 0.08f),
                             modifier = Modifier.fillMaxSize()
                         ) {}
                         Text(
                             text = juz.id.toString(),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = GreenPrimaryLight
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         text = juz.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleLarge,
+                        fontFamily = com.example.quranapp.presentation.ui.theme.ScheherazadeNew,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
-                // Left Side: Expand Icon (Ends on Left in RTL)
+                // Expand/Collapse Icon
                 Surface(
                     shape = CircleShape,
                     color = Color.Transparent,
-                    border = BorderStroke(1.dp, Color(0xFFC9A24D).copy(alpha = 0.5f))
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
                 ) {
                     Icon(
                         imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                         contentDescription = "Expand/Collapse",
-                        tint = Color(0xFFC9A24D),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         modifier = Modifier.padding(8.dp).size(20.dp)
                     )
                 }
             }
 
-            // Expanded Verse List
+            // Expanded List
             if (expanded) {
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                    )
                     juz.verses.forEachIndexed { index, verse ->
                         QuranJuzVerseItem(verse = verse, navController = navController)
                         if (index < juz.verses.size - 1) {
                             HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
-                                modifier = Modifier.padding(horizontal = 16.dp)
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f),
+                                modifier = Modifier.padding(horizontal = 32.dp)
                             )
                         }
                     }
@@ -435,52 +469,62 @@ fun QuranJuzVerseItem(verse: QuranJuzVerseData, navController: NavController) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable { navController.navigate(Screen.QuranReading.createRoute(verse.surahNumber)) }
-            .padding(16.dp),
+            .padding(horizontal = 24.dp, vertical = 20.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = GreenPrimaryLight.copy(alpha = 0.1f),
-                border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.2f))
+                color = Color(0xFFC9A24D).copy(alpha = 0.1f),
+                border = BorderStroke(1.dp, Color(0xFFC9A24D).copy(alpha = 0.2f))
             ) {
-                Text(
-                    text = verse.badge,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = GreenPrimaryLight,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "صـ",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFC9A24D),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp
+                    )
+                    Text(
+                        text = verse.badge,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color(0xFFC9A24D),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(horizontalAlignment = Alignment.Start) {
                 Text(
-                    text = verse.text,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
                     text = verse.details,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    style = MaterialTheme.typography.titleMedium,
+                    fontFamily = com.example.quranapp.presentation.ui.theme.ScheherazadeNew,
+                    fontWeight = FontWeight.Bold,
+                    color = GreenPrimaryLight
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = verse.text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth(0.85f)
                 )
             }
         }
         
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = "Read",
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                modifier = Modifier.padding(8.dp).size(20.dp)
-            )
-        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+            contentDescription = "Read",
+            tint = Color(0xFFC9A24D),
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
 

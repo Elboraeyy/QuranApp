@@ -20,53 +20,53 @@ import androidx.compose.runtime.MutableState
 private val LightColors = lightColorScheme(
     primary = GreenPrimaryLight,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFE6F3EB), // Very light green
-    onPrimaryContainer = Color(0xFF01361B),
+    primaryContainer = Color(0xFFE9F0EC), // Very soft sage green
+    onPrimaryContainer = Color(0xFF0C3322),
     
     secondary = GoldSecondaryLight,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFFDF8EE), // Very light gold
-    onSecondaryContainer = Color(0xFF5A4412),
+    secondaryContainer = Color(0xFFFDFBF5), // Extremely light gold/ivory tint
+    onSecondaryContainer = Color(0xFF5A4A17),
     
     tertiary = GreenPrimaryLight,
     onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFE6F3EB),
-    onTertiaryContainer = Color(0xFF01361B),
+    tertiaryContainer = Color(0xFFE9F0EC),
+    onTertiaryContainer = Color(0xFF0C3322),
     
     background = BackgroundLight,
     onBackground = TextPrimaryLight,
     surface = SurfaceLight,
     onSurface = TextPrimaryLight,
     
-    surfaceVariant = Color(0xFFE7E9E6),
-    onSurfaceVariant = Color(0xFF444744),
-    outline = Color(0xFF747975)
+    surfaceVariant = Color(0xFFF1F4F2), // Subtle contrast for cards
+    onSurfaceVariant = Color(0xFF4A5650),
+    outline = Color(0xFFD3DDD8) // Barely visible outline for luxury feel
 )
 
 private val DarkColors = darkColorScheme(
     primary = GreenPrimaryDark,
-    onPrimary = Color.Black,
-    primaryContainer = Color(0xFF015228),
-    onPrimaryContainer = Color(0xFF8FF5BA),
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFF1A402D),
+    onPrimaryContainer = Color(0xFFA6E2C6),
     
     secondary = GoldSecondaryDark,
     onSecondary = Color.Black,
-    secondaryContainer = Color(0xFF5A4412),
-    onSecondaryContainer = Color(0xFFFFDEA3),
+    secondaryContainer = Color(0xFF4A3C21),
+    onSecondaryContainer = Color(0xFFFFE0B2),
     
     tertiary = GreenPrimaryDark,
-    onTertiary = Color.Black,
-    tertiaryContainer = Color(0xFF015228),
-    onTertiaryContainer = Color(0xFF8FF5BA),
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFF1A402D),
+    onTertiaryContainer = Color(0xFFA6E2C6),
 
     background = BackgroundDark,
     onBackground = TextPrimaryDark,
     surface = SurfaceDark,
     onSurface = TextPrimaryDark,
     
-    surfaceVariant = Color(0xFF444744),
-    onSurfaceVariant = Color(0xFFC4C7C3),
-    outline = Color(0xFF8E928E)
+    surfaceVariant = Color(0xFF2B332F),
+    onSurfaceVariant = Color(0xFFC0CAC4),
+    outline = Color(0xFF3F4D45) // Soft dark outline
 )
 
 @Composable

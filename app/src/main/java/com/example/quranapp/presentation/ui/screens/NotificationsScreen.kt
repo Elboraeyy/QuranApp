@@ -48,104 +48,94 @@ fun NotificationsScreen(navController: NavController) {
     var selectedCategory by remember { mutableStateOf(categories[0]) }
 
     Scaffold(
-        bottomBar = {
-            BottomNavigationBar(navController, Screen.Notifications.route)
-        },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            // Header
-            NotificationsHeader(onBack = { navController.popBackStack() })
-            
-            // Filters
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = spacing.gridMargin, vertical = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                items(categories) { category ->
-                    FilterChipCustom(
-                        category = category,
-                        isSelected = category == selectedCategory,
-                        onClick = { selectedCategory = category }
-                    )
-                }
-            }
-
-            // Notification List
-            LazyColumn(
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = spacing.gridMargin),
-                contentPadding = PaddingValues(bottom = 80.dp), // Padding for bottom nav
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(padding)
             ) {
-                // Today Group
-                item {
-                    DateDivider("اليوم")
-                }
+                NotificationsHeader(onBack = { navController.popBackStack() })
                 
-                item {
-                    NotificationCard(
-                        title = "حان الآن موعد صلاة الفجر لا تنس ركعتي السُّنة",
-                        subtitle = "«أَقِمِ الصَّلَاةَ لِذِكْرِي»",
-                        timeStr = "منذ ساعة و 5 دقائق",
-                        isUnread = true,
-                        icon = Icons.Default.Person
-                    )
-                }
-                
-                item {
-                    NotificationCard(
-                        title = "تبقَّى 10 دقائق على صلاة الظهر",
-                        subtitle = "الصلاة نور لقلبك وراحة ليومك",
-                        timeStr = "منذ 3 ساعات",
-                        isUnread = false,
-                        icon = Icons.Default.Person
-                    )
-                }
-                
-                item {
-                    NotificationCard(
-                        title = "أذكار الصباح",
-                        subtitle = "ابدأ يومك بحفظ من الله وطمأنينة",
-                        timeStr = "منذ ساعتين",
-                        isUnread = true,
-                        icon = Icons.Default.SignLanguage
-                    )
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = spacing.gridMargin, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    items(categories) { category ->
+                        FilterChipCustom(
+                            category = category,
+                            isSelected = category == selectedCategory,
+                            onClick = { selectedCategory = category }
+                        )
+                    }
                 }
 
-                // Previous Date Group
-                item {
-                    DateDivider("3 يناير 2026")
-                }
-                
-                item {
-                    NotificationCard(
-                        title = "إشعارات الأحاديث",
-                        subtitle = "«أَحَبُّ الْكَلَامِ إِلَى اللَّهِ: سُبْحَانَ اللَّهِ، وَالْحَمْدُ لِلَّهِ...»",
-                        timeStr = "منذ 3 أيام",
-                        isUnread = false,
-                        icon = Icons.Default.Book
-                    )
-                }
-                
-                item {
-                    NotificationCard(
-                        title = "أذكار الصباح",
-                        subtitle = "ابدأ يومك بحفظ من الله وطمأنينة",
-                        timeStr = "منذ يومين",
-                        isUnread = true,
-                        icon = Icons.Default.SignLanguage
-                    )
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = spacing.gridMargin),
+                    contentPadding = PaddingValues(bottom = 100.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item { DateDivider("اليوم") }
+                    item {
+                        NotificationCard(
+                            title = "حان الآن موعد صلاة الفجر لا تنس ركعتي السُّنة",
+                            subtitle = "«أَقِمِ الصَّلَاةَ لِذِكْرِي»",
+                            timeStr = "منذ ساعة و 5 دقائق",
+                            isUnread = true,
+                            icon = Icons.Default.Person
+                        )
+                    }
+                    item {
+                        NotificationCard(
+                            title = "تبقَّى 10 دقائق على صلاة الظهر",
+                            subtitle = "الصلاة نور لقلبك وراحة ليومك",
+                            timeStr = "منذ 3 ساعات",
+                            isUnread = false,
+                            icon = Icons.Default.Person
+                        )
+                    }
+                    item {
+                        NotificationCard(
+                            title = "أذكار الصباح",
+                            subtitle = "ابدأ يومك بحفظ من الله وطمأنينة",
+                            timeStr = "منذ ساعتين",
+                            isUnread = true,
+                            icon = Icons.Default.SignLanguage
+                        )
+                    }
+                    item { DateDivider("3 يناير 2026") }
+                    item {
+                        NotificationCard(
+                            title = "إشعارات الأحاديث",
+                            subtitle = "«أَحَبُّ الْكَلَامِ إِلَى اللَّهِ: سُبْحَانَ اللَّهِ، وَالْحَمْدُ لِلَّهِ...»",
+                            timeStr = "منذ 3 أيام",
+                            isUnread = false,
+                            icon = Icons.Default.Book
+                        )
+                    }
+                    item {
+                        NotificationCard(
+                            title = "أذكار الصباح",
+                            subtitle = "ابدأ يومك بحفظ من الله وطمأنينة",
+                            timeStr = "منذ يومين",
+                            isUnread = true,
+                            icon = Icons.Default.SignLanguage
+                        )
+                    }
                 }
             }
+            
+            BottomNavigationBar(
+                navController = navController,
+                currentRoute = Screen.Notifications.route,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 }

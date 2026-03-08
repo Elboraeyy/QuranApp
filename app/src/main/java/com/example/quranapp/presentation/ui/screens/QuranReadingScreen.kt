@@ -1,5 +1,8 @@
 package com.example.quranapp.presentation.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,6 +31,8 @@ import com.example.quranapp.presentation.ui.theme.GreenPrimaryLight
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.quranapp.presentation.viewmodel.SurahDetailViewModel
 import com.example.quranapp.presentation.ui.theme.quranic
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 
 fun Number.toArabicNumerals(): String {
     val arabicNumerals = arrayOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
@@ -67,8 +72,17 @@ fun QuranReadingScreen(
                 sliderPosition = sliderPosition,
                 onSliderValueChange = { sliderPosition = it }
             )
-            if (isAudioPlayerOpen) {
-                QuranAudioPlayerOverlay(onClose = { isAudioPlayerOpen = false })
+            AnimatedVisibility(
+                visible = isAudioPlayerOpen,
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
+            ) {
+                if (isAudioPlayerOpen) {
+                    QuranAudioPlayerOverlay(
+                        surahNumber = surahId, // Changed from surahNumber to surahId
+                        onClose = { isAudioPlayerOpen = false }
+                    )
+                }
             }
         }
     ) { padding ->
@@ -102,34 +116,45 @@ fun QuranReadingScreen(
 
                 // Action Buttons (Left)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val context = androidx.compose.ui.platform.LocalContext.current
                     // Share
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.5f)),
-                        modifier = Modifier.size(40.dp)
+                        shape = CircleShape,
+                        color = Color(0xFFC9A24D).copy(alpha = 0.1f),
+                        modifier = Modifier.size(44.dp)
                     ) {
-                        IconButton(onClick = { /* TODO */ }) {
+                        IconButton(onClick = { 
+                            val shareText = "استمع واقرأ سورة ${surah?.nameArabic ?: ""} عبر تطبيق زاد مسلم"
+                            val sendIntent = android.content.Intent().apply {
+                                action = android.content.Intent.ACTION_SEND
+                                putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                                type = "text/plain"
+                            }
+                            context.startActivity(android.content.Intent.createChooser(sendIntent, "مشاركة السورة"))
+                        }) {
                             Icon(imageVector = Icons.Default.Share, contentDescription = "Share", tint = GreenPrimaryLight)
                         }
                     }
                     // Bookmark
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.5f)),
-                        modifier = Modifier.size(40.dp)
+                        shape = CircleShape,
+                        color = Color(0xFFC9A24D).copy(alpha = 0.1f),
+                        modifier = Modifier.size(44.dp)
                     ) {
-                        IconButton(onClick = { /* TODO */ }) {
-                            Icon(imageVector = Icons.Default.BookmarkBorder, contentDescription = "Bookmark", tint = GreenPrimaryLight)
+                        val isBookmarked by viewModel.isBookmarked.collectAsState()
+                        IconButton(onClick = { viewModel.toggleBookmark() }) {
+                            Icon(
+                                imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                contentDescription = "Bookmark",
+                                tint = GreenPrimaryLight
+                            )
                         }
                     }
                     // Audio
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (isAudioPlayerOpen) MaterialTheme.colorScheme.surface else GreenPrimaryLight,
-                        border = if (isAudioPlayerOpen) BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)) else null,
-                        modifier = Modifier.size(40.dp)
+                        shape = CircleShape,
+                        color = if (isAudioPlayerOpen) MaterialTheme.colorScheme.error.copy(alpha = 0.1f) else Color(0xFFC9A24D).copy(alpha = 0.1f),
+                        modifier = Modifier.size(44.dp)
                     ) {
                         IconButton(onClick = { isAudioPlayerOpen = !isAudioPlayerOpen }) {
                             Icon(
@@ -159,9 +184,9 @@ fun QuranReadingScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         HorizontalDivider(
-                            color = GreenPrimaryLight,
-                            thickness = 2.dp,
-                            modifier = Modifier.padding(horizontal = 32.dp)
+                            color = Color(0xFFC9A24D).copy(alpha = 0.4f),
+                            thickness = 1.dp,
+                            modifier = Modifier.padding(horizontal = 64.dp)
                         )
                         Text(
                             text = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", // Exact Uthmani chars
@@ -173,9 +198,9 @@ fun QuranReadingScreen(
                             fontSize = 32.sp
                         )
                         HorizontalDivider(
-                            color = GreenPrimaryLight,
-                            thickness = 2.dp,
-                            modifier = Modifier.padding(horizontal = 32.dp)
+                            color = Color(0xFFC9A24D).copy(alpha = 0.4f),
+                            thickness = 1.dp,
+                            modifier = Modifier.padding(horizontal = 64.dp)
                         )
                     }
                 }
@@ -238,9 +263,8 @@ fun QuranReadingScreen(
                 ) {
                     Surface(
                         shape = CircleShape,
-                        color = GreenPrimaryLight.copy(alpha = 0.1f),
-                        modifier = Modifier.size(36.dp),
-                        border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.3f))
+                        color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+                        modifier = Modifier.size(40.dp),
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
@@ -265,8 +289,8 @@ fun QuranReadingFooter(
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        shadowElevation = 16.dp, // Premium elevation
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -304,14 +328,14 @@ fun QuranReadingFooter(
                 // Up Arrow
                 Surface(
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.size(36.dp)
+                    color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+                    modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.ArrowUpward,
                         contentDescription = "Previous",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(6.dp)
+                        tint = GreenPrimaryLight,
+                        modifier = Modifier.padding(8.dp)
                     )
                 }
 
@@ -332,14 +356,14 @@ fun QuranReadingFooter(
                 // Down Arrow
                 Surface(
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.size(36.dp)
+                    color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+                    modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.ArrowDownward,
                         contentDescription = "Next",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(6.dp)
+                        tint = GreenPrimaryLight,
+                        modifier = Modifier.padding(8.dp)
                     )
                 }
             }
@@ -350,7 +374,22 @@ fun QuranReadingFooter(
 }
 
 @Composable
-fun QuranAudioPlayerOverlay(onClose: () -> Unit) {
+fun QuranAudioPlayerOverlay(
+    surahNumber: Int,
+    onClose: () -> Unit,
+    viewModel: com.example.quranapp.presentation.viewmodel.AudioPlayerViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+) {
+    val isPlaying by viewModel.isPlaying.collectAsState()
+    val currentPosition by viewModel.currentPosition.collectAsState()
+    val duration by viewModel.duration.collectAsState()
+
+    fun formatTime(ms: Long): String {
+        val totalSeconds = ms / 1000
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return String.format("%02d:%02d", minutes, seconds)
+    }
+
     Surface(
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 16.dp,
@@ -381,24 +420,32 @@ fun QuranAudioPlayerOverlay(onClose: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "10:00",
+                    text = formatTime(currentPosition),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                LinearProgressIndicator(
-                    progress = { 0.1f },
-                    color = GreenPrimaryLight,
-                    trackColor = GreenPrimaryLight.copy(alpha = 0.2f),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(4.dp)
-                        .clip(CircleShape)
+                
+                val progressValue = if (duration > 0) (currentPosition.toFloat() / duration.toFloat()) else 0f
+                Slider(
+                    value = progressValue,
+                    onValueChange = { newVal ->
+                        if (duration > 0) {
+                            viewModel.seekTo((newVal * duration).toLong())
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = SliderDefaults.colors(
+                        thumbColor = GreenPrimaryLight,
+                        activeTrackColor = GreenPrimaryLight,
+                        inactiveTrackColor = GreenPrimaryLight.copy(alpha = 0.2f)
+                    )
                 )
+                
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "1:50:00",
+                    text = formatTime(duration),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -414,19 +461,40 @@ fun QuranAudioPlayerOverlay(onClose: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Icon(imageVector = Icons.Default.Repeat, contentDescription = "Loop", tint = MaterialTheme.colorScheme.onSurface)
-                Icon(imageVector = Icons.Default.SkipPrevious, contentDescription = "Previous", tint = MaterialTheme.colorScheme.onSurface)
+                
+                IconButton(onClick = { viewModel.previous() }) {
+                    Icon(imageVector = Icons.Default.SkipPrevious, contentDescription = "Previous", tint = MaterialTheme.colorScheme.onSurface)
+                }
                 
                 Surface(
                     shape = CircleShape,
                     color = GreenPrimaryLight,
                     modifier = Modifier.size(56.dp)
                 ) {
-                    IconButton(onClick = { /* TODO Play/Pause */ }) {
-                        Icon(imageVector = Icons.Default.Pause, contentDescription = "Pause", tint = Color.White, modifier = Modifier.size(32.dp))
+                    IconButton(onClick = { 
+                        if (isPlaying) {
+                            viewModel.pause()
+                        } else {
+                            if (currentPosition > 0L) {
+                                viewModel.resume()
+                            } else {
+                                viewModel.playSurah(surahNumber)
+                            }
+                        }
+                    }) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp)
+                        )
                     }
                 }
                 
-                Icon(imageVector = Icons.Default.SkipNext, contentDescription = "Next", tint = MaterialTheme.colorScheme.onSurface)
+                IconButton(onClick = { viewModel.next() }) {
+                    Icon(imageVector = Icons.Default.SkipNext, contentDescription = "Next", tint = MaterialTheme.colorScheme.onSurface)
+                }
+                
                 Icon(imageVector = Icons.Default.HeadsetMic, contentDescription = "Audio Settings", tint = GreenPrimaryLight)
             }
 

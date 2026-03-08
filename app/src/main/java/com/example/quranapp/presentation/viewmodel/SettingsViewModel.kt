@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.quranapp.domain.model.AppSettings
 import com.example.quranapp.domain.model.FontFamily
 import com.example.quranapp.domain.model.ThemeMode
+import com.example.quranapp.domain.model.AdhanPreference
 import com.example.quranapp.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,5 +39,9 @@ class SettingsViewModel @Inject constructor(
 
     fun updateFontFamily(fontFamily: FontFamily) {
         viewModelScope.launch { repository.updateFontFamily(fontFamily) }
+    }
+
+    fun updateAdhanPreference(prayerId: Int, preference: AdhanPreference) {
+        viewModelScope.launch { repository.updateAdhanPreference(prayerId, preference) }
     }
 }

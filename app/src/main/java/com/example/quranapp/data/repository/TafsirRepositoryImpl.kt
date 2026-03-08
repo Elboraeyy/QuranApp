@@ -6,13 +6,16 @@ import com.example.quranapp.domain.repository.TafsirRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
-class TafsirRepositoryImpl @Inject constructor() : TafsirRepository {
+import com.example.quranapp.data.remote.api.QuranApi
+
+class TafsirRepositoryImpl @Inject constructor(
+    private val quranApi: QuranApi
+) : TafsirRepository {
     
     override suspend fun getAllTafsirs(): List<Tafsir> {
         return listOf(
-            Tafsir("jalalayn", "Tafsir Al-Jalalayn", "تفسير الجلالين", "ar"),
-            Tafsir("ibn_kathir", "Tafsir Ibn Kathir", "تفسير ابن كثير", "ar"),
-            Tafsir("tabari", "Tafsir Al-Tabari", "تفسير الطبري", "ar")
+            Tafsir("ar.jalalayn", "تفسير الجلالين", "تفسير الجلالين المبسط", "ar"),
+            Tafsir("ar.muyassar", "تفسير الميسر", "التفسير الميسر للآيات", "ar")
         )
     }
     
@@ -21,14 +24,19 @@ class TafsirRepositoryImpl @Inject constructor() : TafsirRepository {
     }
     
     override suspend fun getTafsirText(surahNumber: Int, ayahNumber: Int, tafsirId: String): TafsirText? {
-        // This would fetch from API or local cache
-        // For now, return null as placeholder
-        return null
+        return getTafsirTextsBySurah(surahNumber, tafsirId).find { it.ayahNumber == ayahNumber }
     }
     
     override suspend fun getTafsirTextsBySurah(surahNumber: Int, tafsirId: String): List<TafsirText> {
-        // This would fetch from API or local cache
-        return emptyList()
+        val result = quranApi.getSurahTafsir(surahNumber, tafsirId)
+        return result.data.ayahs.map { ayahDto ->
+            TafsirText(
+                surahNumber = surahNumber,
+                ayahNumber = ayahDto.numberInSurah,
+                tafsirId = tafsirId,
+                text = ayahDto.text
+            )
+        }
     }
     
     override suspend fun cacheTafsir(tafsirText: TafsirText) {

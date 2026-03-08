@@ -23,6 +23,10 @@ class DefaultQiblaTracker @Inject constructor(
     override fun startTracking(): Flow<Float> = callbackFlow {
         var lastGravity: FloatArray? = null
         var lastGeomagnetic: FloatArray? = null
+        
+        // Smoothing variables
+        var currentAzimuth = 0f
+        val ALPHA = 0.15f // Lower value = smoother but more delay
 
         val sensorEventListener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
@@ -38,11 +42,23 @@ class DefaultQiblaTracker @Inject constructor(
                     if (SensorManager.getRotationMatrix(r, i, lastGravity, lastGeomagnetic)) {
                         val orientation = FloatArray(3)
                         SensorManager.getOrientation(r, orientation)
-                        // Convert azimuth from radians to degrees (-180 to 180)
                         var azimuthInDegrees = Math.toDegrees(orientation[0].toDouble()).toFloat()
-                        // Normalize to 0-360
                         azimuthInDegrees = (azimuthInDegrees + 360) % 360
-                        trySend(azimuthInDegrees)
+                        
+                        // Exponential Moving Average filter
+                        if (currentAzimuth == 0f) {
+                            currentAzimuth = azimuthInDegrees // Initialize
+                        } else {
+                            // Handle the 0-360 wraparound issue for smoothing
+                            var delta = azimuthInDegrees - currentAzimuth
+                            if (delta < -180) delta += 360
+                            else if (delta > 180) delta -= 360
+                            
+                            currentAzimuth += ALPHA * delta
+                            currentAzimuth = (currentAzimuth + 360) % 360
+                        }
+                        
+                        trySend(currentAzimuth)
                     }
                 }
             }

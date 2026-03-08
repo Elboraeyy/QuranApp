@@ -12,7 +12,15 @@ data class AppSettings(
     val appLanguage: AppLanguage = AppLanguage.ENGLISH,
     val enableNotifications: Boolean = true,
     val enableAthan: Boolean = true,
-    val calculationMethod: Int = 1
+    val calculationMethod: Int = 1,
+    val fajrPreference: AdhanPreference = AdhanPreference.ADHAN,
+    val sunrisePreference: AdhanPreference = AdhanPreference.NONE,
+    val dhuhrPreference: AdhanPreference = AdhanPreference.ADHAN,
+    val asrPreference: AdhanPreference = AdhanPreference.ADHAN,
+    val maghribPreference: AdhanPreference = AdhanPreference.ADHAN,
+    val ishaPreference: AdhanPreference = AdhanPreference.ADHAN,
+    val totalTasbihCount: Int = 0,
+    val selectedTasbihPhraseId: Int = 1
 )
 
 enum class ThemeMode {
@@ -42,5 +50,11 @@ enum class AppLanguage {
     FRENCH,
     MALAY,
     INDONESIAN
+}
+
+enum class AdhanPreference {
+    ADHAN,
+    NOTIFICATION,
+    NONE
 }
 

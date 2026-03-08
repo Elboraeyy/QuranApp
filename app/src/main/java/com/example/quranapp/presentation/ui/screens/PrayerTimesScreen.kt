@@ -20,76 +20,97 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.quranapp.presentation.navigation.Screen
 import com.example.quranapp.presentation.ui.components.BottomNavigationBar
 import com.example.quranapp.presentation.ui.theme.GreenPrimaryLight
 import com.example.quranapp.presentation.ui.theme.spacing
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.quranapp.presentation.viewmodel.PrayerTimesViewModel
+import com.example.quranapp.presentation.viewmodel.SettingsViewModel
+import com.example.quranapp.domain.model.AdhanPreference
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PrayerTimesScreen(navController: NavController) {
+fun PrayerTimesScreen(
+    navController: NavController,
+    prayerViewModel: PrayerTimesViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel()
+) {
     val spacing = MaterialTheme.spacing
     
+    val todayPrayerTime by prayerViewModel.today.collectAsState()
+    val settings by settingsViewModel.settings.collectAsState()
+    val locationName by prayerViewModel.locationName.collectAsState()
+
     // Using a simple state for demonstration. In a real app, this comes from ViewModel/Room.
-    var prayers by remember {
-        mutableStateOf(
-            listOf(
-                PrayerItemData("الفجر", "05:13 ص", Icons.Default.WbCloudy, true),
-                PrayerItemData("الشروق", "06:46 ص", Icons.Default.WbSunny, false, isPrayer = false),
-                PrayerItemData("الظهر", "11:50 ص", Icons.Default.WbSunny, true),
-                PrayerItemData("العصر", "02:36 م", Icons.Default.WbCloudy, false),
-                PrayerItemData("المغرب", "4:00 م", Icons.Default.Mosque, true),
-                PrayerItemData("العشاء", "6:19 م", Icons.Default.NightlightRound, false)
-            )
+    var completedStates by remember { mutableStateOf(mapOf<String, Boolean>()) }
+
+    val prayers = remember(todayPrayerTime, settings) {
+        listOf(
+            PrayerItemData("الفجر", todayPrayerTime.fajr, Icons.Default.WbCloudy, 1, settings.fajrPreference),
+            PrayerItemData("الشروق", todayPrayerTime.sunrise, Icons.Default.WbSunny, 2, settings.sunrisePreference, isPrayer = false),
+            PrayerItemData("الظهر", todayPrayerTime.dhuhr, Icons.Default.WbSunny, 3, settings.dhuhrPreference),
+            PrayerItemData("العصر", todayPrayerTime.asr, Icons.Default.WbCloudy, 4, settings.asrPreference),
+            PrayerItemData("المغرب", todayPrayerTime.maghrib, Icons.Default.Mosque, 5, settings.maghribPreference),
+            PrayerItemData("العشاء", todayPrayerTime.isha, Icons.Default.NightlightRound, 6, settings.ishaPreference)
         )
     }
 
     Scaffold(
-        bottomBar = {
-            BottomNavigationBar(navController, Screen.PrayerTimes.route)
-        },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            // Header with Date Nav and Settings
-            PrayerTrackingHeader()
-            
-            LazyColumn(
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = spacing.gridMargin),
-                contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp), // Bottom padding for FAB overlap
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(padding)
             ) {
-                // History Button
-                item {
-                    HistoryButton()
-                }
+                PrayerTrackingHeader(todayPrayerTime.date)
                 
-                // Prayer List
-                items(prayers) { prayer ->
-                    PrayerTrackingItem(
-                        item = prayer,
-                        onCheckedChange = { isChecked ->
-                            prayers = prayers.map {
-                                if (it.name == prayer.name) it.copy(isCompleted = isChecked) else it
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = spacing.gridMargin),
+                    contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item {
+                        HistoryButton()
+                    }
+                    
+                    items(prayers) { prayer ->
+                        PrayerTrackingItem(
+                            item = prayer,
+                            isCompleted = completedStates[prayer.name] ?: false,
+                            onCheckedChange = { isChecked ->
+                                completedStates = completedStates.toMutableMap().apply { put(prayer.name, isChecked) }
+                            },
+                            onPreferenceChange = {
+                                val nextPref = when (prayer.preference) {
+                                    AdhanPreference.ADHAN -> AdhanPreference.NOTIFICATION
+                                    AdhanPreference.NOTIFICATION -> AdhanPreference.NONE
+                                    AdhanPreference.NONE -> AdhanPreference.ADHAN
+                                }
+                                settingsViewModel.updateAdhanPreference(prayer.id, nextPref)
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
+            
+            BottomNavigationBar(
+                navController = navController,
+                currentRoute = Screen.PrayerTimes.route,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 }
 
 @Composable
-fun PrayerTrackingHeader() {
+fun PrayerTrackingHeader(dateText: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -100,14 +121,15 @@ fun PrayerTrackingHeader() {
         // Settings Icon (Left in RTL)
         Surface(
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.size(40.dp)
+            color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+            modifier = Modifier.size(44.dp)
         ) {
             IconButton(onClick = { /* Open Settings */ }) {
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = "Settings",
-                    tint = GreenPrimaryLight
+                    tint = GreenPrimaryLight,
+                    modifier = Modifier.padding(2.dp)
                 )
             }
         }
@@ -120,7 +142,7 @@ fun PrayerTrackingHeader() {
                 Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Previous Day", tint = GreenPrimaryLight)
             }
             Text(
-                text = "الثلاثاء 26 جمادى الثاني 1447 هـ",
+                text = dateText.ifEmpty { "الثلاثاء 26 جمادى الثاني 1447 هـ" },
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -134,28 +156,38 @@ fun PrayerTrackingHeader() {
 @Composable
 fun HistoryButton() {
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 4.dp,
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f)),
         modifier = Modifier.fillMaxWidth().clickable { /* Navigate to History */ }
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.History, // Placeholder for tracking icon
-                    contentDescription = "Prayer History",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.width(12.dp))
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.History, // Placeholder for tracking icon
+                        contentDescription = "Prayer History",
+                        tint = GreenPrimaryLight,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
                 Text(
                     text = "سجل الصلوات",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Icon(
@@ -170,53 +202,107 @@ fun HistoryButton() {
 @Composable
 fun PrayerTrackingItem(
     item: PrayerItemData,
-    onCheckedChange: (Boolean) -> Unit
+    isCompleted: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    onPreferenceChange: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 2.dp,
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f)),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        // Right side (RTL) - Icon and Name
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = item.icon,
-                contentDescription = item.name,
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = item.name,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        // Left side (RTL) - Time and Checkbox
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = item.time,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            if (item.isPrayer) {
-                Checkbox(
-                    checked = item.isCompleted,
-                    onCheckedChange = onCheckedChange,
-                    colors = CheckboxDefaults.colors(
-                        checkedColor = GreenPrimaryLight,
-                        uncheckedColor = MaterialTheme.colorScheme.outline
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Right side (RTL) - Icon and Name
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = CircleShape,
+                    color = GreenPrimaryLight.copy(alpha = 0.1f),
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = item.name,
+                        tint = GreenPrimaryLight,
+                        modifier = Modifier.padding(8.dp)
                     )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontFamily = com.example.quranapp.presentation.ui.theme.ScheherazadeNew,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 22.sp
                 )
-            } else {
-                // Placeholder space to keep alignment for Sunrise
-                Spacer(modifier = Modifier.size(48.dp)) // Approximate checkbox size
+            }
+
+            // Left side (RTL) - Time and Checkbox
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = item.time,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = GreenPrimaryLight
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                if (item.isPrayer) {
+                    IconButton(onClick = onPreferenceChange) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.Transparent,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = when (item.preference) {
+                                    AdhanPreference.ADHAN -> Icons.Default.NotificationsActive
+                                    AdhanPreference.NOTIFICATION -> Icons.Default.Notifications
+                                    AdhanPreference.NONE -> Icons.Default.NotificationsOff
+                                },
+                                contentDescription = "Notification Preference",
+                                tint = if (item.preference != AdhanPreference.NONE) Color(0xFFC9A24D) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                modifier = Modifier.padding(6.dp)
+                            )
+                        }
+                    }
+                    Checkbox(
+                        checked = isCompleted,
+                        onCheckedChange = onCheckedChange,
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = GreenPrimaryLight,
+                            uncheckedColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        )
+                    )
+                } else {
+                    IconButton(onClick = onPreferenceChange) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.Transparent,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = when (item.preference) {
+                                    AdhanPreference.ADHAN -> Icons.Default.NotificationsActive
+                                    AdhanPreference.NOTIFICATION -> Icons.Default.Notifications
+                                    AdhanPreference.NONE -> Icons.Default.NotificationsOff
+                                },
+                                contentDescription = "Notification Preference",
+                                tint = if (item.preference != AdhanPreference.NONE) Color(0xFFC9A24D) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                modifier = Modifier.padding(6.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.size(48.dp)) // Approximate checkbox size
+                }
             }
         }
     }
@@ -226,7 +312,8 @@ data class PrayerItemData(
     val name: String,
     val time: String,
     val icon: ImageVector,
-    val isCompleted: Boolean = false,
+    val id: Int,
+    val preference: AdhanPreference,
     val isPrayer: Boolean = true // False for Sunrise
 )
 

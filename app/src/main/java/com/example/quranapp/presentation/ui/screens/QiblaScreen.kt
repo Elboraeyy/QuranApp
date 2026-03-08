@@ -23,6 +23,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,7 +42,13 @@ fun QiblaScreen(navController: NavController) {
     val direction by viewModel.direction.collectAsState()
     val qiblaAngle by viewModel.qiblaAngle.collectAsState()
     val distance by viewModel.distance.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
     val spacing = MaterialTheme.spacing
+
+    // Permissions (Simplistic for now, assuming handled slightly higher up or prompt user)
+    // We already request it on Home, but Qibla needs it specifically
+    // So if there's an error about location, we show it.
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -53,12 +61,31 @@ fun QiblaScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Header
-            QiblaHeader(onBack = { navController.popBackStack() }, onRefresh = { /* Refresh Location */ })
+            QiblaHeader(onBack = { navController.popBackStack() }, onRefresh = { viewModel.refreshLocation() })
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            // Map Card
-            QiblaMapCard(distance = distance)
+            if (isLoading) {
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+            } else if (error != null) {
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = error ?: "حدث خطأ غير معروف",
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = { viewModel.refreshLocation() }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
+                            Text("إعادة المحاولة", color = MaterialTheme.colorScheme.onPrimary)
+                        }
+                    }
+                }
+            } else {
+                // Map Card
+                QiblaMapCard(distance = distance)
             
             Spacer(modifier = Modifier.height(24.dp))
             
@@ -70,14 +97,14 @@ fun QiblaScreen(navController: NavController) {
                 Text(
                     text = "برجاء قم بتدوير الهاتف للشمال قليلاً",
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color(0xFFC04C36), // A reddish warning/instruction color
+                    color = Color(0xFFC9A24D), // Soft Gold
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(
                     imageVector = Icons.Default.ScreenRotation,
                     contentDescription = "Rotate",
-                    tint = Color(0xFFC04C36),
+                    tint = Color(0xFFC9A24D),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -89,20 +116,19 @@ fun QiblaScreen(navController: NavController) {
             
             Spacer(modifier = Modifier.weight(1f))
             
-            // Angle Indicator
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.3f)),
-                color = GreenPrimaryLight.copy(alpha = 0.1f),
-                modifier = Modifier.padding(bottom = 32.dp) // Bottom padding
-            ) {
-                Text(
-                    text = "زاوية القبلة ${qiblaAngle.toInt()}°",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
-                )
+                Surface(
+                    shape = RoundedCornerShape(32.dp),
+                    color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+                    modifier = Modifier.padding(bottom = 32.dp) // Bottom padding
+                ) {
+                    Text(
+                        text = "زاوية القبلة ${qiblaAngle.toInt()}°",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = GreenPrimaryLight,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                    )
+                }
             }
         }
     }
@@ -120,14 +146,14 @@ fun QiblaHeader(onBack: () -> Unit, onRefresh: () -> Unit) {
         // Back Button (Right in RTL)
         Surface(
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.size(48.dp)
+            color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+            modifier = Modifier.size(44.dp)
         ) {
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = GreenPrimaryLight
                 )
             }
         }
@@ -140,9 +166,9 @@ fun QiblaHeader(onBack: () -> Unit, onRefresh: () -> Unit) {
 
         // Refresh Button (Left in RTL)
         Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = GreenPrimaryLight.copy(alpha = 0.1f),
-            modifier = Modifier.size(48.dp)
+            shape = CircleShape,
+            color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+            modifier = Modifier.size(44.dp)
         ) {
             IconButton(onClick = onRefresh) {
                 Icon(
@@ -157,12 +183,14 @@ fun QiblaHeader(onBack: () -> Unit, onRefresh: () -> Unit) {
 
 @Composable
 fun QiblaMapCard(distance: Int) {
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .height(140.dp),
-        shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        shape = RoundedCornerShape(32.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp,
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             // Map Background Placeholder (Gradient for now)
@@ -282,6 +310,13 @@ fun QiblaMapCard(distance: Int) {
 
 @Composable
 fun QiblaCompass(direction: Float, qiblaAngle: Float) {
+    // Smoother animation for compass rotation
+    val animatedDirection by animateFloatAsState(
+        targetValue = -direction,
+        animationSpec = tween(durationMillis = 300),
+        label = "compassRotation"
+    )
+
     Box(
         modifier = Modifier
             .size(300.dp)
@@ -304,7 +339,7 @@ fun QiblaCompass(direction: Float, qiblaAngle: Float) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .rotate(-direction),
+                .rotate(animatedDirection),
             contentAlignment = Alignment.Center
         ) {
             // Compass background (Placeholder for actual asset)
@@ -352,13 +387,11 @@ fun QiblaCompass(direction: Float, qiblaAngle: Float) {
             }
         }
 
-        // Fixed Kaaba indicator at the top (or specific angle if logic implemented)
-        // For visual representation of the design, we place it at the top.
+        // Fixed Kaaba indicator at the top relative to Qibla angle
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .rotate(qiblaAngle - direction) // Kaaba relative to current direction
-                .padding(16.dp),
+                .rotate(qiblaAngle + animatedDirection), // Combined rotation smoothly
             contentAlignment = Alignment.TopCenter
         ) {
             Box(

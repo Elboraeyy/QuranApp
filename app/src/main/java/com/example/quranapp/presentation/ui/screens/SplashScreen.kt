@@ -11,7 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -20,17 +20,30 @@ import androidx.navigation.NavController
 import com.example.quranapp.presentation.navigation.Screen
 import com.example.quranapp.presentation.ui.theme.GreenPrimaryLight
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.ui.text.style.TextAlign
 
 @Composable
 fun SplashScreen(navController: NavController) {
     val alphaAnim = remember { Animatable(0f) }
+    val scaleAnim = remember { Animatable(0.8f) }
 
     LaunchedEffect(Unit) {
-        alphaAnim.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = 1500)
-        )
-        delay(1000)
+        // Parallel animations for fade and subtle scale
+        launch {
+            alphaAnim.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 1800, easing = FastOutSlowInEasing)
+            )
+        }
+        launch {
+            scaleAnim.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 1800, easing = FastOutSlowInEasing)
+            )
+        }
+        
+        delay(1500)
         navController.navigate(Screen.Onboarding.route) {
             popUpTo(Screen.Splash.route) { inclusive = true }
         }
@@ -44,37 +57,44 @@ fun SplashScreen(navController: NavController) {
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.alpha(alphaAnim.value)
+            modifier = Modifier
+                .alpha(alphaAnim.value)
+                .scale(scaleAnim.value)
         ) {
-            // App Logo Placeholder (Matching Design)
-            Box(
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(GreenPrimaryLight),
-                contentAlignment = Alignment.Center
+            // Premium Logo Display
+            Surface(
+                shape = CircleShape,
+                color = Color(0xFFC9A24D).copy(alpha = 0.15f), // Soft Gold Backdrop
+                modifier = Modifier.size(140.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Mosque,
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(60.dp)
+                    tint = GreenPrimaryLight,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp)
                 )
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
             
             Text(
                 text = "زاد مسلم",
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.displayMedium,
+                fontFamily = com.example.quranapp.presentation.ui.theme.ScheherazadeNew,
                 fontWeight = FontWeight.Bold,
                 color = GreenPrimaryLight
             )
             
+            Spacer(modifier = Modifier.height(8.dp))
+            
             Text(
                 text = "الدليل الإسلامي الشامل",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                style = MaterialTheme.typography.titleMedium,
+                fontFamily = com.example.quranapp.presentation.ui.theme.ScheherazadeNew,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                letterSpacing = 1.sp
             )
         }
         

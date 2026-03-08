@@ -83,9 +83,8 @@ fun TasbihScreen(
                 // Refresh Button (Left in Arabic)
                 Surface(
                     shape = CircleShape,
-                    color = GreenPrimaryLight.copy(alpha = 0.1f),
-                    border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.3f)),
-                    modifier = Modifier.size(40.dp)
+                    color = Color(0xFFC9A24D).copy(alpha = 0.1f),
+                    modifier = Modifier.size(44.dp)
                 ) {
                     IconButton(onClick = { viewModel.resetCount() }) {
                         Icon(
@@ -101,8 +100,10 @@ fun TasbihScreen(
 
             // Phrase Card
             Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant, // Adapts to light/dark
+                shape = RoundedCornerShape(32.dp),
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 8.dp,
+                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f)),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = spacing.gridMargin)
@@ -110,19 +111,21 @@ fun TasbihScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(24.dp),
+                        .padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = phrase,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontFamily = com.example.quranapp.presentation.ui.theme.ScheherazadeNew,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        lineHeight = 32.sp
+                        color = GreenPrimaryLight,
+                        lineHeight = 48.sp,
+                        fontSize = 32.sp
                     )
                     
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -132,11 +135,11 @@ fun TasbihScreen(
                         // Left Arrow
                         Surface(
                             shape = CircleShape,
-                            color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(36.dp)
+                            color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+                            modifier = Modifier.size(44.dp)
                         ) {
                             IconButton(onClick = { /* Previous Phrase */ }) {
-                                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous", tint = MaterialTheme.colorScheme.onSecondary)
+                                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous", tint = GreenPrimaryLight)
                             }
                         }
                         
@@ -160,12 +163,11 @@ fun TasbihScreen(
                         // Right Arrow
                         Surface(
                             shape = CircleShape,
-                            color = Color.Transparent,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
-                            modifier = Modifier.size(36.dp)
+                            color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+                            modifier = Modifier.size(44.dp)
                         ) {
                             IconButton(onClick = { /* Next Phrase */ }) {
-                                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next", tint = MaterialTheme.colorScheme.secondary)
+                                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next", tint = GreenPrimaryLight)
                             }
                         }
                     }
@@ -209,32 +211,32 @@ fun TasbihScreen(
                         color = MaterialTheme.colorScheme.surface,
                         shadowElevation = 8.dp,
                         modifier = Modifier
-                            .size(90.dp)
+                            .size(100.dp)
                             .clickable { viewModel.incrementCount() }
                     ) {
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                              // Background ring
                              CircularProgressIndicator(
                                  progress = { 1f },
-                                 modifier = Modifier.fillMaxSize(),
-                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                 modifier = Modifier.fillMaxSize(0.9f),
+                                 color = Color(0xFFC9A24D).copy(alpha = 0.2f),
                                  strokeWidth = 6.dp
                              )
                              
                              // Fill ring (Progress)
                              CircularProgressIndicator(
                                  progress = { currentCount.toFloat() / targetCount.toFloat() },
-                                 modifier = Modifier.fillMaxSize(),
-                                 color = MaterialTheme.colorScheme.primary,
+                                 modifier = Modifier.fillMaxSize(0.9f),
+                                 color = Color(0xFFC9A24D),
                                  strokeWidth = 6.dp
                              )
 
                              // Inner Green Circle
                              Surface(
                                  shape = CircleShape,
-                                 color = MaterialTheme.colorScheme.primary,
+                                 color = GreenPrimaryLight,
                                  modifier = Modifier
-                                     .size(70.dp)
+                                     .size(80.dp)
                                      .align(Alignment.Center)
                              ) {
                                   Column(
@@ -244,14 +246,14 @@ fun TasbihScreen(
                                       Icon(
                                           imageVector = Icons.Default.TouchApp,
                                           contentDescription = "Tap",
-                                          tint = MaterialTheme.colorScheme.onPrimary,
+                                          tint = Color.White,
                                           modifier = Modifier.size(24.dp)
                                       )
                                       Text(
                                           text = "$currentCount/$targetCount",
                                           style = MaterialTheme.typography.titleMedium,
                                           fontWeight = FontWeight.Bold,
-                                          color = MaterialTheme.colorScheme.onPrimary
+                                          color = Color.White
                                       )
                                   }
                              }
