@@ -30,16 +30,21 @@ class SurahListViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    init {
+        loadSurahs()
+    }
+
     fun loadSurahs() {
+        // Don't reload if data is already cached
+        if (_surahs.value.isNotEmpty()) return
+
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 android.util.Log.d("SurahListViewModel", "Started fetching full Quran...")
-                // Fetch surahs (this will trigger the massive Full Quran download if DB is empty)
                 _surahs.value = getAllSurahsUseCase()
                 android.util.Log.d("SurahListViewModel", "Fetched surahs: ${_surahs.value.size}")
                 
-                // Fetch the boundaries (1st ayah of each juz)
                 _juzBoundaries.value = getJuzBoundariesUseCase()
                 android.util.Log.d("SurahListViewModel", "Fetched boundaries: ${_juzBoundaries.value.size}")
             } catch (e: Exception) {

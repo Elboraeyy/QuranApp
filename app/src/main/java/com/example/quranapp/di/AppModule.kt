@@ -103,9 +103,10 @@ object AppModule {
     fun provideQuranRepository(
         surahDao: SurahDao,
         ayahDao: AyahDao,
-        quranApi: QuranApi
+        quranApi: QuranApi,
+        @ApplicationContext context: Context
     ): QuranRepository {
-        return QuranRepositoryImpl(surahDao, ayahDao, quranApi)
+        return QuranRepositoryImpl(surahDao, ayahDao, quranApi, context)
     }
     
     @Provides

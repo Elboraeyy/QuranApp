@@ -30,6 +30,9 @@ import com.example.quranapp.presentation.ui.theme.GreenPrimaryLight
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.quranapp.presentation.viewmodel.SurahListViewModel
 import com.example.quranapp.domain.model.Surah
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,23 +56,65 @@ fun QuranIndexScreen(
     val juzs = remember(juzBoundaries, surahs) {
         if (surahs.isEmpty() || juzBoundaries.isEmpty()) emptyList()
         else {
-            juzBoundaries.map { ayah ->
-                val surah = surahs.find { it.number == ayah.surahNumber }
+            juzBoundaries.mapIndexed { index, ayah ->
+                val startSurahNumber = ayah.surahNumber
+                val endSurahNumber = if (index < juzBoundaries.size - 1) {
+                    juzBoundaries[index + 1].surahNumber
+                } else {
+                    114
+                }
+                
+                // Get all surahs that this Juz passes through
+                val juzSurahs = surahs.filter { it.number in startSurahNumber..endSurahNumber }
+                
+                val verses = juzSurahs.mapNotNull { surah ->
+                    val textDesc = when {
+                        surah.number == startSurahNumber && surah.number == endSurahNumber -> {
+                            val endAyah = if (index < juzBoundaries.size - 1) juzBoundaries[index + 1].numberInSurah - 1 else surah.numberOfAyahs
+                            if (ayah.numberInSurah == 1 && endAyah == surah.numberOfAyahs) "السورة كاملة"
+                            else "الآيات ${ayah.numberInSurah} - $endAyah"
+                        }
+                        surah.number == startSurahNumber -> {
+                            if (ayah.numberInSurah == 1) "السورة كاملة"
+                            else "من آية ${ayah.numberInSurah} إلى آخر السورة"
+                        }
+                        surah.number == endSurahNumber -> {
+                            val endAyah = if (index < juzBoundaries.size - 1) juzBoundaries[index + 1].numberInSurah - 1 else surah.numberOfAyahs
+                            if (endAyah == surah.numberOfAyahs) "السورة كاملة"
+                            else if (endAyah > 0) "من بداية السورة إلى آية $endAyah"
+                            else null
+                        }
+                        else -> "السورة كاملة"
+                    }
+                    
+                    if (textDesc == null) null
+                    else {
+                        QuranJuzVerseData(
+                            text = textDesc,
+                            details = "سُورَةُ ${surah.nameArabic}",
+                            badge = surah.number.toString(), // We can use Surah number as the badge instead of Page since Page is 0 right now
+                            surahNumber = surah.number
+                        )
+                    }
+                }
+                
                 QuranJuzData(
                     id = ayah.juz,
                     name = "الجزء ${ayah.juz}",
-                    verses = listOf(
-                        // Just one preview verse per Juz for now
-                        QuranJuzVerseData(
-                            text = ayah.text,
-                            details = "سُورَةُ ${surah?.nameArabic ?: ""} - آية ${ayah.numberInSurah}",
-                            badge = ayah.page.toString(),
-                            surahNumber = ayah.surahNumber
-                        )
-                    )
+                    verses = verses
                 )
             }
         }
+    }
+
+
+
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
+    val coroutineScope = rememberCoroutineScope()
+
+    // Sync tab with pager swipe
+    LaunchedEffect(pagerState.currentPage) {
+        selectedTab = pagerState.currentPage
     }
 
     Scaffold(
@@ -129,7 +174,7 @@ fun QuranIndexScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Toggle Switch
+            // Tab Switch
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -143,20 +188,37 @@ fun QuranIndexScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(modifier = Modifier.padding(4.dp)) {
-                        // Parts (الأجزاء) Tab
-                        QuranTabItem(
-                            title = "الأجزاء",
-                            count = "30",
-                            isSelected = selectedTab == 1,
-                            onClick = { selectedTab = 1 },
-                            modifier = Modifier.weight(1f)
-                        )
-                        // Surahs (السورة) Tab
+                        // السورة Tab (First in code = Right in RTL)
                         QuranTabItem(
                             title = "السورة",
                             count = "114",
                             isSelected = selectedTab == 0,
-                            onClick = { selectedTab = 0 },
+                            onClick = { 
+                                selectedTab = 0 
+                                coroutineScope.launch { pagerState.animateScrollToPage(0) }
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                        // الجزء Tab (Middle)
+                        QuranTabItem(
+                            title = "الأجزاء",
+                            count = "30",
+                            isSelected = selectedTab == 1,
+                            onClick = { 
+                                selectedTab = 1 
+                                coroutineScope.launch { pagerState.animateScrollToPage(1) }
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                        // العلامات Tab (Last in code = Left in RTL)
+                        QuranTabItem(
+                            title = "العلامات",
+                            count = "0",
+                            isSelected = selectedTab == 2,
+                            onClick = { 
+                                selectedTab = 2 
+                                coroutineScope.launch { pagerState.animateScrollToPage(2) }
+                            },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -165,76 +227,125 @@ fun QuranIndexScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // List
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = spacing.gridMargin),
-                contentPadding = PaddingValues(bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                if (selectedTab == 0) {
-                    if (isLoading) {
-                        item {
-                            CircularProgressIndicator(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .wrapContentWidth(Alignment.CenterHorizontally),
-                                color = GreenPrimaryLight
-                            )
+            // Swipeable Content
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                userScrollEnabled = true
+            ) { page ->
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = spacing.gridMargin),
+                    contentPadding = PaddingValues(bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    when (page) {
+                        0 -> {
+                            // Surah View
+                            if (isLoading) {
+                                item {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .wrapContentWidth(Alignment.CenterHorizontally),
+                                        color = GreenPrimaryLight
+                                    )
+                                }
+                            } else if (errorMessage != null) {
+                                item {
+                                    Text(
+                                        "Error: $errorMessage",
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            } else if (surahs.isEmpty()) {
+                                item {
+                                    Text(
+                                        "جاري تحميل البيانات، يرجى التأكد من اتصالك بالإنترنت...",
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = MaterialTheme.colorScheme.onSurface.copy(0.6f)
+                                    )
+                                }
+                            } else {
+                                items(surahs) { surah ->
+                                    QuranSurahItem(surah = surah, navController = navController)
+                                }
+                            }
                         }
-                    } else if (errorMessage != null) {
-                        item {
-                            Text(
-                                "Error: $errorMessage",
-                                modifier = Modifier.fillMaxWidth(),
-                                color = MaterialTheme.colorScheme.error
-                            )
+                        1 -> {
+                            // Juz View
+                            if (isLoading) {
+                                item {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .wrapContentWidth(Alignment.CenterHorizontally),
+                                        color = GreenPrimaryLight
+                                    )
+                                }
+                            } else if (errorMessage != null) {
+                                item {
+                                    Text(
+                                        "Error: $errorMessage",
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            } else if (juzs.isEmpty()) {
+                                 item {
+                                    Text(
+                                        "جاري تحميل البيانات...",
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = MaterialTheme.colorScheme.onSurface.copy(0.6f)
+                                    )
+                                }
+                            } else {
+                                items(juzs) { juz ->
+                                    QuranJuzAccordion(juz = juz, navController = navController)
+                                }
+                            }
                         }
-                    } else if (surahs.isEmpty()) {
-                        item {
-                            Text(
-                                "جاري تحميل البيانات، يرجى التأكد من اتصالك بالإنترنت...",
-                                modifier = Modifier.fillMaxWidth(),
-                                color = MaterialTheme.colorScheme.onSurface.copy(0.6f)
-                            )
-                        }
-                    } else {
-                        // Surah View
-                        items(surahs) { surah ->
-                            QuranSurahItem(surah = surah, navController = navController)
-                        }
-                    }
-                } else {
-                    if (isLoading) {
-                        item {
-                            CircularProgressIndicator(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .wrapContentWidth(Alignment.CenterHorizontally),
-                                color = GreenPrimaryLight
-                            )
-                        }
-                    } else if (errorMessage != null) {
-                        item {
-                            Text(
-                                "Error: $errorMessage",
-                                modifier = Modifier.fillMaxWidth(),
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    } else if (juzs.isEmpty()) {
-                         item {
-                            Text(
-                                "جاري تحميل البيانات...",
-                                modifier = Modifier.fillMaxWidth(),
-                                color = MaterialTheme.colorScheme.onSurface.copy(0.6f)
-                            )
-                        }
-                    } else {
-                        // Juz View
-                        items(juzs) { juz ->
-                            QuranJuzAccordion(juz = juz, navController = navController)
+                        2 -> {
+                            // Bookmarks View
+                            item {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 64.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = Color(0xFFC9A24D).copy(alpha = 0.1f),
+                                        modifier = Modifier.size(80.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                            Icon(
+                                                imageVector = Icons.Default.Search,
+                                                contentDescription = "Bookmarks",
+                                                tint = Color(0xFFC9A24D),
+                                                modifier = Modifier.size(36.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(24.dp))
+                                    Text(
+                                        text = "لا توجد علامات حتى الآن",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onBackground
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "أضف علامة أثناء القراءة لتسهيل العودة إليها لاحقاً",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
