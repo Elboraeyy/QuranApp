@@ -15,5 +15,9 @@ interface QuranRepository {
     suspend fun getAyatByJuz(juz: Int): List<Ayah>
     suspend fun getJuzBoundaries(): List<Ayah>
     fun getSurahsFlow(): Flow<List<Surah>>
+    
+    // QCF Exact page rendering
+    suspend fun getQcfPage(pageNumber: Int): com.example.quranapp.domain.model.QcfPage
+    suspend fun getSurahStartPages(): Map<Int, Int>
 }
 

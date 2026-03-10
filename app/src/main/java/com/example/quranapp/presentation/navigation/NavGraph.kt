@@ -126,13 +126,13 @@ fun SetupNavGraph(navController: NavHostController) {
         composable(
             route = Screen.QuranReading.route,
             arguments = listOf(
-                navArgument("surahId") { type = NavType.IntType }
+                navArgument("startPage") { type = NavType.IntType }
             )
         ) { backStackEntry ->
-            val surahId = backStackEntry.arguments?.getInt("surahId") ?: 2
+            val startPage = backStackEntry.arguments?.getInt("startPage") ?: 1
             QuranReadingScreen(
                 navController = navController,
-                surahId = surahId
+                startPage = startPage
             )
         }
     }

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.quranapp.domain.usecase.GetAllSurahsUseCase
 import com.example.quranapp.domain.usecase.GetJuzBoundariesUseCase
 import com.example.quranapp.domain.model.Ayah
+import com.example.quranapp.domain.repository.QuranRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +16,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SurahListViewModel @Inject constructor(
     private val getAllSurahsUseCase: GetAllSurahsUseCase,
-    private val getJuzBoundariesUseCase: GetJuzBoundariesUseCase
+    private val getJuzBoundariesUseCase: GetJuzBoundariesUseCase,
+    private val quranRepository: QuranRepository
 ) : ViewModel() {
 
     private val _surahs = MutableStateFlow<List<com.example.quranapp.domain.model.Surah>>(emptyList())
@@ -23,6 +25,9 @@ class SurahListViewModel @Inject constructor(
 
     private val _juzBoundaries = MutableStateFlow<List<Ayah>>(emptyList())
     val juzBoundaries: StateFlow<List<Ayah>> = _juzBoundaries.asStateFlow()
+
+    private val _surahStartPages = MutableStateFlow<Map<Int, Int>>(emptyMap())
+    val surahStartPages: StateFlow<Map<Int, Int>> = _surahStartPages.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -42,11 +47,15 @@ class SurahListViewModel @Inject constructor(
             _isLoading.value = true
             try {
                 android.util.Log.d("SurahListViewModel", "Started fetching full Quran...")
-                _surahs.value = getAllSurahsUseCase()
-                android.util.Log.d("SurahListViewModel", "Fetched surahs: ${_surahs.value.size}")
+                val surahsList = getAllSurahsUseCase()
+                _surahs.value = surahsList
+                android.util.Log.d("SurahListViewModel", "Fetched surahs: ${surahsList.size}")
                 
                 _juzBoundaries.value = getJuzBoundariesUseCase()
                 android.util.Log.d("SurahListViewModel", "Fetched boundaries: ${_juzBoundaries.value.size}")
+                
+                // Calculate starting pages using local QCF data (single fast call)
+                _surahStartPages.value = quranRepository.getSurahStartPages()
             } catch (e: Exception) {
                 android.util.Log.e("SurahListViewModel", "Error loading surahs", e)
                 _errorMessage.value = e.message ?: e.toString()

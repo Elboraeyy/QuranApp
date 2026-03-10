@@ -31,6 +31,10 @@ class QuranRepositoryImpl @Inject constructor(
     private var cachedSurahs: List<Surah>? = null
     private var cachedJuzBoundaries: List<Ayah>? = null
     
+    // QCF V1 Cache
+    private var cachedQcfVerses: List<com.example.quranapp.domain.model.QcfVerse>? = null
+
+    
     override suspend fun getAllSurahs(): List<Surah> {
         // Return from memory cache first
         cachedSurahs?.let { return it }
@@ -165,7 +169,93 @@ class QuranRepositoryImpl @Inject constructor(
         return result
     }
     
+    override suspend fun getQcfPage(pageNumber: Int): com.example.quranapp.domain.model.QcfPage {
+        val linesMap = getQcfLinesForPage(pageNumber)
+        val lines = linesMap.entries
+            .sortedBy { it.key.toIntOrNull() ?: 0 }
+            .map { (lineNum, text) ->
+                com.example.quranapp.domain.model.QcfLine(
+                    lineNumber = lineNum.toIntOrNull() ?: 0,
+                    text = text
+                )
+            }
+        
+        // Also get verse info for this page to determine surah headers
+        val allVerses = getQcfVerses()
+        val pageVerses = allVerses.filter { it.page == pageNumber }
+        
+        return com.example.quranapp.domain.model.QcfPage(
+            pageNumber = pageNumber,
+            lines = lines,
+            verses = pageVerses
+        )
+    }
+    
+    // Cache for qcf_lines.json
+    private var cachedQcfLines: org.json.JSONObject? = null
+    
+    private suspend fun getQcfLinesForPage(pageNumber: Int): Map<String, String> {
+        if (cachedQcfLines == null) {
+            try {
+                val jsonString = context.assets.open("qcf_lines.json").bufferedReader().use { it.readText() }
+                cachedQcfLines = org.json.JSONObject(jsonString)
+            } catch (e: Exception) {
+                android.util.Log.e("QuranRepositoryImpl", "Failed to load qcf_lines.json", e)
+                return emptyMap()
+            }
+        }
+        
+        val pageObj = cachedQcfLines?.optJSONObject(pageNumber.toString()) ?: return emptyMap()
+        val result = mutableMapOf<String, String>()
+        val keys = pageObj.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            result[key] = pageObj.getString(key)
+        }
+        return result
+    }
+    
+    private suspend fun getQcfVerses(): List<com.example.quranapp.domain.model.QcfVerse> {
+        cachedQcfVerses?.let { return it }
+        val result = try {
+            val jsonString = context.assets.open("qcf_quran.json").bufferedReader().use { it.readText() }
+            val jsonObject = org.json.JSONObject(jsonString)
+            val jsonArray = jsonObject.getJSONArray("verses")
+            val verses = mutableListOf<com.example.quranapp.domain.model.QcfVerse>()
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                val verseKey = obj.getString("verse_key").split(":")
+                verses.add(
+                    com.example.quranapp.domain.model.QcfVerse(
+                        id = obj.getInt("id"),
+                        surahNumber = verseKey[0].toInt(),
+                        ayahNumber = verseKey[1].toInt(),
+                        codeV1 = obj.getString("code_v1"),
+                        page = obj.getInt("v1_page")
+                    )
+                )
+            }
+            verses
+        } catch (e: Exception) {
+            android.util.Log.e("QuranRepositoryImpl", "Failed to load QCF mapped data", e)
+            emptyList()
+        }
+        cachedQcfVerses = result
+        return result
+    }
+    
     override fun getSurahsFlow(): Flow<List<Surah>> {
         return surahDao.getAllSurahs().map { surahs -> surahs.map { it.toDomain() } }
+    }
+    
+    override suspend fun getSurahStartPages(): Map<Int, Int> {
+        val verses = getQcfVerses()
+        val pageMap = mutableMapOf<Int, Int>()
+        for (verse in verses) {
+            if (verse.ayahNumber == 1 && !pageMap.containsKey(verse.surahNumber)) {
+                pageMap[verse.surahNumber] = verse.page
+            }
+        }
+        return pageMap
     }
 }

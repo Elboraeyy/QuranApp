@@ -4,9 +4,13 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,8 +25,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.ui.platform.LocalContext
+import android.graphics.Typeface
+import androidx.compose.ui.text.font.Typeface as ComposeTypeface
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -45,21 +56,23 @@ fun Number.toArabicNumerals(): String {
 @Composable
 fun QuranReadingScreen(
     navController: NavController,
-    surahId: Int = 1,
+    startPage: Int = 1,
     viewModel: SurahDetailViewModel = hiltViewModel()
 ) {
+    val surah by viewModel.surah.collectAsState()
+    val qcfPage by viewModel.qcfPage.collectAsState()
+    val isBookmarked by viewModel.isBookmarked.collectAsState()
     val spacing = MaterialTheme.spacing
-    val scrollState = rememberScrollState()
     var sliderPosition by remember { mutableStateOf(0f) }
     var isAudioPlayerOpen by remember { mutableStateOf(false) }
 
-    val surah by viewModel.surah.collectAsState()
-    val ayahs by viewModel.ayahs.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
-    LaunchedEffect(surahId) {
-        viewModel.loadSurah(surahId)
+    val pagerState = rememberPagerState(initialPage = startPage - 1, pageCount = { 604 })
+    val context = LocalContext.current
+
+    LaunchedEffect(pagerState.currentPage) {
+        viewModel.loadPage(pagerState.currentPage + 1)
     }
 
     val surahNameToDisplay = surah?.nameArabic ?: "جاري التحميل..."
@@ -79,7 +92,7 @@ fun QuranReadingScreen(
             ) {
                 if (isAudioPlayerOpen) {
                     QuranAudioPlayerOverlay(
-                        surahNumber = surahId, // Changed from surahNumber to surahId
+                        surahNumber = surah?.number ?: 1, // Changed from surahNumber to surahId
                         onClose = { isAudioPlayerOpen = false }
                     )
                 }
@@ -167,94 +180,68 @@ fun QuranReadingScreen(
                 }
             }
 
-            // Scrollable Content
-            Column(
+            // Scrollable Content - RTL for Mushaf reading direction
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+            HorizontalPager(
+                state = pagerState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .verticalScroll(scrollState)
                     .padding(horizontal = spacing.gridMargin)
-            ) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Bismillah Banner
-                if (surahId != 1 && surahId != 9) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        HorizontalDivider(
-                            color = Color(0xFFC9A24D).copy(alpha = 0.4f),
-                            thickness = 1.dp,
-                            modifier = Modifier.padding(horizontal = 64.dp)
-                        )
-                        Text(
-                            text = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", // Exact Uthmani chars
-                            style = MaterialTheme.typography.headlineMedium.quranic,
-                            color = GreenPrimaryLight,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(vertical = 12.dp),
-                            fontSize = 32.sp
-                        )
-                        HorizontalDivider(
-                            color = Color(0xFFC9A24D).copy(alpha = 0.4f),
-                            thickness = 1.dp,
-                            modifier = Modifier.padding(horizontal = 64.dp)
-                        )
+            ) { pageIndex ->
+                val actualPage = pageIndex + 1
+                
+                // Load standard page font
+                val fontPath = String.format("fonts/QCF_P%03d.TTF", actualPage)
+                val typeface = remember(actualPage) {
+                    try {
+                        Typeface.createFromAsset(context.assets, fontPath)
+                    } catch (e: Exception) {
+                        Typeface.DEFAULT
                     }
                 }
+                val qcfFontFamily = remember(typeface) { FontFamily(ComposeTypeface(typeface)) }
+                
+                
+                // Content for the page (only renders if it's the currently loaded QCF page)
+                if (qcfPage?.pageNumber == actualPage && qcfPage?.lines?.isNotEmpty() == true) {
+                    BoxWithConstraints(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val availableWidth = maxWidth
+                        // Auto-scale font size relative to screen width for exact Mushaf fit
+                        val fontSize = (availableWidth.value / 18f).sp
+                        val lineHeight = fontSize * 1.85f
 
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Quranic Text Example
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .wrapContentWidth(Alignment.CenterHorizontally),
-                        color = GreenPrimaryLight
-                    )
-                } else if (errorMessage != null) {
-                    Text(
-                        text = "Error: $errorMessage",
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
-                } else if (ayahs.isNotEmpty()) {
-                    val fullText = ayahs.mapIndexed { index, ayah ->
-                        var text = ayah.text
-                        // Strip bismillah if it's the first ayah and not Surah 1
-                        if (index == 0 && surahId != 1 && surahId != 9) {
-                            // AlQuran Cloud Uthmani text exact prefix
-                            val bismillahPrefix = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-                            if (text.startsWith(bismillahPrefix)) {
-                                text = text.removePrefix(bismillahPrefix).trim()
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            qcfPage?.lines?.forEach { line ->
+                                Text(
+                                    text = line.text,
+                                    fontFamily = qcfFontFamily,
+                                    fontSize = fontSize,
+                                    lineHeight = lineHeight,
+                                    textAlign = TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    maxLines = 1,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
                             }
                         }
-                        "$text \uFD3F${ayah.numberInSurah.toArabicNumerals()}\uFD3E"
-                    }.joinToString(" ")
-                    Text(
-                        text = fullText,
-                        style = MaterialTheme.typography.headlineLarge.quranic,
-                        fontSize = 30.sp,
-                        lineHeight = 52.sp,
-                        textAlign = TextAlign.Justify,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
+                    }
                 } else {
-                    Text(
-                        text = "لا توجد بيانات متاحة حالياً",
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = GreenPrimaryLight)
+                    }
                 }
+            }
+            } // close CompositionLocalProvider
 
-                Spacer(modifier = Modifier.height(48.dp))
-
-                // Page Number Indicator
+            // Page Number Indicator
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -268,7 +255,7 @@ fun QuranReadingScreen(
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
-                                text = "1",
+                                text = (pagerState.currentPage + 1).toArabicNumerals(),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = GreenPrimaryLight,
                                 fontWeight = FontWeight.Bold
@@ -279,7 +266,6 @@ fun QuranReadingScreen(
             }
         }
     }
-}
 
 @Composable
 fun QuranReadingFooter(

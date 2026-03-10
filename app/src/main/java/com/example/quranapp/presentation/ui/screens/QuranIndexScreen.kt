@@ -45,6 +45,7 @@ fun QuranIndexScreen(
 
     val surahs by viewModel.surahs.collectAsState()
     val juzBoundaries by viewModel.juzBoundaries.collectAsState()
+    val surahStartPages by viewModel.surahStartPages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
@@ -269,8 +270,17 @@ fun QuranIndexScreen(
                                     )
                                 }
                             } else {
-                                items(surahs) { surah ->
-                                    QuranSurahItem(surah = surah, navController = navController)
+                                items(surahs.size) { index ->
+                                    val surah = surahs[index]
+                                    val startPage = surahStartPages[surah.number] ?: 1
+                                    QuranSurahItem(
+                                        surah = surah,
+                                        startPage = startPage,
+                                        navController = navController
+                                    )
+                                    if (index < surahs.size - 1) {
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                    }
                                 }
                             }
                         }
@@ -392,7 +402,7 @@ fun QuranTabItem(title: String, count: String, isSelected: Boolean, onClick: () 
 }
 
 @Composable
-fun QuranSurahItem(surah: Surah, navController: NavController) {
+fun QuranSurahItem(surah: Surah, startPage: Int, navController: NavController) {
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -400,7 +410,7 @@ fun QuranSurahItem(surah: Surah, navController: NavController) {
         border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f)),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { navController.navigate(Screen.QuranReading.createRoute(surah.number)) }
+            .clickable { navController.navigate(Screen.QuranReading.createRoute(startPage)) }
     ) {
         Row(
             modifier = Modifier

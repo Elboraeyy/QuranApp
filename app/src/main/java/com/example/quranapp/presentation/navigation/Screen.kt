@@ -31,8 +31,8 @@ sealed class Screen(val route: String) {
     }
     object Tasbih : Screen("tasbih")
     object QuranIndex : Screen("quran_index")
-    object QuranReading : Screen("quran_reading/{surahId}") {
-        fun createRoute(surahId: Int) = "quran_reading/$surahId"
+    object QuranReading : Screen("quran_reading/{startPage}") {
+        fun createRoute(startPage: Int) = "quran_reading/$startPage"
     }
     object TafsirDetail : Screen("tafsir_detail/{surahName}") {
         fun createRoute(surahName: String) = "tafsir_detail/$surahName"
