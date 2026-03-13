@@ -77,9 +77,13 @@ dependencies {
     
     // Image Loading
     implementation(libs.coil.compose)
+    implementation("io.coil-kt:coil-svg:2.5.0")
     
     // Animations
     implementation(libs.lottie.compose)
+    
+    // Capturable (Convert Composable to Bitmap)
+    implementation("dev.shreyaspatil:capturable:2.1.0")
     
     // Networking
     implementation(libs.retrofit)

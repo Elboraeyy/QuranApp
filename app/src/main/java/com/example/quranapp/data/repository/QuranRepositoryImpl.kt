@@ -171,14 +171,16 @@ class QuranRepositoryImpl @Inject constructor(
     
     override suspend fun getQcfPage(pageNumber: Int): com.example.quranapp.domain.model.QcfPage {
         val linesMap = getQcfLinesForPage(pageNumber)
-        val lines = linesMap.entries
-            .sortedBy { it.key.toIntOrNull() ?: 0 }
+        val textLines = linesMap.entries
             .map { (lineNum, text) ->
                 com.example.quranapp.domain.model.QcfLine(
                     lineNumber = lineNum.toIntOrNull() ?: 0,
                     text = text
                 )
             }
+            
+        val headerLines = getSurahHeadersForPage(pageNumber)
+        val allLines = (textLines + headerLines).sortedBy { it.lineNumber }
         
         // Also get verse info for this page to determine surah headers
         val allVerses = getQcfVerses()
@@ -186,7 +188,7 @@ class QuranRepositoryImpl @Inject constructor(
         
         return com.example.quranapp.domain.model.QcfPage(
             pageNumber = pageNumber,
-            lines = lines,
+            lines = allLines,
             verses = pageVerses
         )
     }
@@ -211,6 +213,35 @@ class QuranRepositoryImpl @Inject constructor(
         while (keys.hasNext()) {
             val key = keys.next()
             result[key] = pageObj.getString(key)
+        }
+        return result
+    }
+
+    private var cachedSurahHeaders: org.json.JSONObject? = null
+
+    private suspend fun getSurahHeadersForPage(pageNumber: Int): List<com.example.quranapp.domain.model.QcfLine> {
+        if (cachedSurahHeaders == null) {
+            try {
+                val jsonString = context.assets.open("surah_headers.json").bufferedReader().use { it.readText() }
+                cachedSurahHeaders = org.json.JSONObject(jsonString)
+            } catch (e: Exception) {
+                android.util.Log.e("QuranRepositoryImpl", "Failed to load surah_headers.json", e)
+                return emptyList()
+            }
+        }
+
+        val pageArray = cachedSurahHeaders?.optJSONArray(pageNumber.toString()) ?: return emptyList()
+        val result = mutableListOf<com.example.quranapp.domain.model.QcfLine>()
+        for (i in 0 until pageArray.length()) {
+            val obj = pageArray.getJSONObject(i)
+            result.add(
+                com.example.quranapp.domain.model.QcfLine(
+                    lineNumber = obj.getInt("lineNumber"),
+                    text = "",
+                    surahNumber = obj.getInt("surahNumber"),
+                    isBismillah = obj.getBoolean("isBismillah")
+                )
+            )
         }
         return result
     }

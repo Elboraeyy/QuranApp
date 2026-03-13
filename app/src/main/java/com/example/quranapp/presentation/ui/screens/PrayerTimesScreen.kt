@@ -47,14 +47,26 @@ fun PrayerTimesScreen(
     // Using a simple state for demonstration. In a real app, this comes from ViewModel/Room.
     var completedStates by remember { mutableStateOf(mapOf<String, Boolean>()) }
 
+    // Helper to format 24h to 12h
+    fun formatTo12Hour(timeStr: String): String {
+        if (timeStr == "00:00" || timeStr.contains("--")) return timeStr
+        try {
+            val cleanTime = timeStr.substringBefore(" ").trim()
+            val time = java.time.LocalTime.parse(cleanTime, java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+            return time.format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a", java.util.Locale("ar")))
+        } catch (e: Exception) {
+            return timeStr
+        }
+    }
+
     val prayers = remember(todayPrayerTime, settings) {
         listOf(
-            PrayerItemData("الفجر", todayPrayerTime.fajr, Icons.Default.WbCloudy, 1, settings.fajrPreference),
-            PrayerItemData("الشروق", todayPrayerTime.sunrise, Icons.Default.WbSunny, 2, settings.sunrisePreference, isPrayer = false),
-            PrayerItemData("الظهر", todayPrayerTime.dhuhr, Icons.Default.WbSunny, 3, settings.dhuhrPreference),
-            PrayerItemData("العصر", todayPrayerTime.asr, Icons.Default.WbCloudy, 4, settings.asrPreference),
-            PrayerItemData("المغرب", todayPrayerTime.maghrib, Icons.Default.Mosque, 5, settings.maghribPreference),
-            PrayerItemData("العشاء", todayPrayerTime.isha, Icons.Default.NightlightRound, 6, settings.ishaPreference)
+            PrayerItemData("الفجر", formatTo12Hour(todayPrayerTime.fajr), Icons.Default.WbCloudy, 1, settings.fajrPreference),
+            PrayerItemData("الشروق", formatTo12Hour(todayPrayerTime.sunrise), Icons.Default.WbSunny, 2, settings.sunrisePreference, isPrayer = false),
+            PrayerItemData("الظهر", formatTo12Hour(todayPrayerTime.dhuhr), Icons.Default.WbSunny, 3, settings.dhuhrPreference),
+            PrayerItemData("العصر", formatTo12Hour(todayPrayerTime.asr), Icons.Default.WbCloudy, 4, settings.asrPreference),
+            PrayerItemData("المغرب", formatTo12Hour(todayPrayerTime.maghrib), Icons.Default.Mosque, 5, settings.maghribPreference),
+            PrayerItemData("العشاء", formatTo12Hour(todayPrayerTime.isha), Icons.Default.NightlightRound, 6, settings.ishaPreference)
         )
     }
 

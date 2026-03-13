@@ -10,6 +10,9 @@ import com.example.quranapp.data.local.dao.FavoriteDao
 import com.example.quranapp.data.local.dao.ProgressDao
 import com.example.quranapp.data.local.dao.SettingsDao
 import com.example.quranapp.data.local.dao.SurahDao
+import com.example.quranapp.data.local.dao.TasbihDao
+import com.example.quranapp.data.local.dao.HadithBookmarkDao
+import com.example.quranapp.data.local.entity.HadithBookmarkEntity
 import com.example.quranapp.data.local.entity.AdhkarProgressEntity
 import com.example.quranapp.data.local.entity.AyahEntity
 import com.example.quranapp.data.local.entity.BookmarkEntity
@@ -17,6 +20,7 @@ import com.example.quranapp.data.local.entity.FavoriteEntity
 import com.example.quranapp.data.local.entity.ProgressEntity
 import com.example.quranapp.data.local.entity.SettingsEntity
 import com.example.quranapp.data.local.entity.SurahEntity
+import com.example.quranapp.data.local.entity.TasbihEntity
 
 @Database(
     entities = [
@@ -26,9 +30,11 @@ import com.example.quranapp.data.local.entity.SurahEntity
         ProgressEntity::class,
         FavoriteEntity::class,
         SettingsEntity::class,
-        AdhkarProgressEntity::class
+        AdhkarProgressEntity::class,
+        TasbihEntity::class,
+        HadithBookmarkEntity::class
     ],
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -40,5 +46,7 @@ abstract class QuranDatabase : RoomDatabase() {
     abstract fun favoriteDao(): FavoriteDao
     abstract fun settingsDao(): SettingsDao
     abstract fun adhkarDao(): AdhkarDao
+    abstract fun tasbihDao(): TasbihDao
+    abstract fun hadithBookmarkDao(): HadithBookmarkDao
 }
 

@@ -32,7 +32,7 @@ import com.example.quranapp.presentation.ui.theme.GreenPrimaryLight
 fun FavoritesScreen(navController: NavController, viewModel: com.example.quranapp.presentation.viewmodel.FavoritesViewModel = androidx.hilt.navigation.compose.hiltViewModel()) {
     val spacing = MaterialTheme.spacing
     
-    val tabs = listOf("الأذكار", "القرآن الكريم", "التفسير و المعاني")
+    val tabs = listOf("الأذكار", "الأحاديث", "القرآن الكريم", "التفسير و المعاني")
     var selectedTabIndex by remember { mutableStateOf(0) }
 
     val allFavorites by viewModel.favorites.collectAsState()
@@ -100,7 +100,7 @@ fun FavoritesScreen(navController: NavController, viewModel: com.example.quranap
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = spacing.gridMargin),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 tabs.forEachIndexed { index, title ->
                     val isSelected = selectedTabIndex == index
@@ -117,7 +117,7 @@ fun FavoritesScreen(navController: NavController, viewModel: com.example.quranap
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                             color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
+                            modifier = Modifier.padding(vertical = 12.dp, horizontal = 2.dp),
                             maxLines = 1,
                             fontSize = 11.sp
                         )
@@ -153,11 +153,43 @@ fun FavoritesScreen(navController: NavController, viewModel: com.example.quranap
                         }
                     }
                 }
+            } else if (selectedTabIndex == 1) {
+                // Hadiths Link
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(spacing.gridMargin),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = GreenPrimaryLight.copy(alpha = 0.1f),
+                        onClick = { navController.navigate(com.example.quranapp.presentation.navigation.Screen.BookmarkedHadiths.route) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Bookmark,
+                                contentDescription = null,
+                                tint = GreenPrimaryLight,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Text(
+                                text = "عرض الأحاديث المحفوظة",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = GreenPrimaryLight
+                            )
+                        }
+                    }
+                }
             } else {
                 // Placeholder for other tabs (Quran, Tafsir)
                 Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "لا توجد عناصر محفوظة هنا حالياً",
+                        text = "لا توجد عناصرحاليا",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )

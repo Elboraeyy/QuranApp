@@ -275,7 +275,7 @@ fun PrayerTimesCard(prayerTime: PrayerTime?) {
 
                     val duration = Duration.between(now, nextPrayer.second)
                     val hours = duration.toHours()
-                    val minutes = duration.toMinutesPart()
+                    val minutes = duration.toMinutes() % 60
                     remainingTime = String.format("%02d:%02d", hours, minutes)
                 } else {
                     // Next is tomorrow's Fajr
@@ -283,9 +283,12 @@ fun PrayerTimesCard(prayerTime: PrayerTime?) {
                     nextPrayerTime = prayers[0].second.format(formatter)
 
                     // Add 24 hours for tomorrow's time to compute remaining time
-                    val duration = Duration.between(now, prayers[0].second.plusHours(24))
+                    var duration = Duration.between(now, prayers[0].second)
+                    if (duration.isNegative) {
+                        duration = duration.plusHours(24)
+                    }
                     val hours = duration.toHours()
-                    val minutes = duration.toMinutesPart()
+                    val minutes = duration.toMinutes() % 60
                     remainingTime = String.format("%02d:%02d", hours, minutes)
                 }
             }
@@ -345,17 +348,30 @@ fun PrayerTimesCard(prayerTime: PrayerTime?) {
             )
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Helper to format 24h to 12h
+            fun formatTo12Hour(timeStr: String): String {
+                if (timeStr == "00:00" || timeStr.contains("--")) return timeStr
+                try {
+                    val cleanTime = timeStr.substringBefore(" ").trim()
+                    val time = LocalTime.parse(cleanTime, DateTimeFormatter.ofPattern("HH:mm"))
+                    // Use a simple 12-hour format "hh:mm a"
+                    return time.format(DateTimeFormatter.ofPattern("hh:mm a", java.util.Locale("ar")))
+                } catch (e: Exception) {
+                    return timeStr
+                }
+            }
+
             // Grid of prayer times at the bottom
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                PrayerTimeColumn("الفجر", prayerTime?.fajr ?: "00:00", isNext = nextPrayerName == "الفجر")
-                PrayerTimeColumn("الظهر", prayerTime?.dhuhr ?: "00:00", isNext = nextPrayerName == "الظهر")
-                PrayerTimeColumn("العصر", prayerTime?.asr ?: "00:00", isNext = nextPrayerName == "العصر")
-                PrayerTimeColumn("المغرب", prayerTime?.maghrib ?: "00:00", isNext = nextPrayerName == "المغرب")
-                PrayerTimeColumn("العشاء", prayerTime?.isha ?: "00:00", isNext = nextPrayerName == "العشاء")
+                PrayerTimeColumn("الفجر", formatTo12Hour(prayerTime?.fajr ?: "00:00"), isNext = nextPrayerName == "الفجر")
+                PrayerTimeColumn("الظهر", formatTo12Hour(prayerTime?.dhuhr ?: "00:00"), isNext = nextPrayerName == "الظهر")
+                PrayerTimeColumn("العصر", formatTo12Hour(prayerTime?.asr ?: "00:00"), isNext = nextPrayerName == "العصر")
+                PrayerTimeColumn("المغرب", formatTo12Hour(prayerTime?.maghrib ?: "00:00"), isNext = nextPrayerName == "المغرب")
+                PrayerTimeColumn("العشاء", formatTo12Hour(prayerTime?.isha ?: "00:00"), isNext = nextPrayerName == "العشاء")
             }
         }
     }
@@ -384,14 +400,18 @@ fun PrayerTimeColumn(name: String, time: String, isNext: Boolean = false) {
             text = name,
             style = MaterialTheme.typography.labelMedium,
             color = contentColor,
-            fontWeight = fontWeight
+            fontWeight = fontWeight,
+            maxLines = 1,
+            softWrap = false
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = time,
             style = MaterialTheme.typography.bodyMedium,
             color = if (isNext) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-            fontWeight = fontWeight
+            fontWeight = fontWeight,
+            maxLines = 1,
+            softWrap = false
         )
     }
 }
@@ -479,7 +499,7 @@ fun ToolsSection(navController: NavController) {
                 ToolCard(
                     title = "التسبيح",
                     icon = Icons.Default.Favorite,
-                    onClick = { navController.navigate(Screen.Tasbih.route) },
+                    onClick = { navController.navigate(Screen.TasbihList.route) },
                     modifier = Modifier.width(110.dp)
                 )
             }
@@ -487,7 +507,7 @@ fun ToolsSection(navController: NavController) {
                 ToolCard(
                     title = "الحديث",
                     icon = Icons.Default.MenuBook, // Fallback icon for Hadith
-                    onClick = { /* Navigate to Hadith Screen when implemented */ },
+                    onClick = { navController.navigate(Screen.HadithList.route) },
                     modifier = Modifier.width(110.dp)
                 )
             }
@@ -781,7 +801,7 @@ fun HadithSection(hadith: com.example.quranapp.domain.model.Hadith?) {
 
                 // The Hadith Text
                 Text(
-                    text = hadith?.text ?: "جاري التحميل...",
+                    text = "\"" + (hadith?.text ?: "جاري التحميل...") + "\"",
                     style = MaterialTheme.typography.titleLarge,
                     fontFamily = com.example.quranapp.presentation.ui.theme.ScheherazadeNew,
                     textAlign = TextAlign.Center,

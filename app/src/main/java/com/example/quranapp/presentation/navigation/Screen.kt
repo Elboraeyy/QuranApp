@@ -29,7 +29,14 @@ sealed class Screen(val route: String) {
     object AdhkarDetail : Screen("adhkar_detail/{categoryId}") {
         fun createRoute(categoryId: Int) = "adhkar_detail/$categoryId"
     }
-    object Tasbih : Screen("tasbih")
+    object TasbihList : Screen("tasbih_list")
+    object TasbihCounting : Screen("tasbih_counting/{tasbihId}") {
+        fun createRoute(tasbihId: Int) = "tasbih_counting/$tasbihId"
+    }
+    object HadithList : Screen("hadith_list")
+    object HadithDetail : Screen("hadith_detail/{hadithId}") {
+        fun createRoute(hadithId: Int) = "hadith_detail/$hadithId"
+    }
     object QuranIndex : Screen("quran_index")
     object QuranReading : Screen("quran_reading/{startPage}") {
         fun createRoute(startPage: Int) = "quran_reading/$startPage"
@@ -37,5 +44,6 @@ sealed class Screen(val route: String) {
     object TafsirDetail : Screen("tafsir_detail/{surahName}") {
         fun createRoute(surahName: String) = "tafsir_detail/$surahName"
     }
+    object BookmarkedHadiths : Screen("bookmarked_hadiths")
 }
 

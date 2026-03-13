@@ -6,8 +6,35 @@ import androidx.navigation.NavType
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.quranapp.presentation.ui.screens.*
-import com.example.quranapp.presentation.ui.screens.TasbihScreen
+import com.example.quranapp.presentation.ui.screens.AboutScreen
+import com.example.quranapp.presentation.ui.screens.AdhkarDetailScreen
+import com.example.quranapp.presentation.ui.screens.AdhkarListScreen
+import com.example.quranapp.presentation.ui.screens.AudioPlayerScreen
+import com.example.quranapp.presentation.ui.screens.BookmarkedHadithsScreen
+import com.example.quranapp.presentation.ui.screens.DailyTasksScreen
+import com.example.quranapp.presentation.ui.screens.FavoritesScreen
+import com.example.quranapp.presentation.ui.screens.HadithDetailScreen
+import com.example.quranapp.presentation.ui.screens.HadithListScreen
+import com.example.quranapp.presentation.ui.screens.HomeScreen
+import com.example.quranapp.presentation.ui.screens.JuzListScreen
+import com.example.quranapp.presentation.ui.screens.LoginScreen
+import com.example.quranapp.presentation.ui.screens.MushafPageScreen
+import com.example.quranapp.presentation.ui.screens.OnboardingScreen
+import com.example.quranapp.presentation.ui.screens.PrayerTimesScreen
+import com.example.quranapp.presentation.ui.screens.ProgressScreen
+import com.example.quranapp.presentation.ui.screens.QiblaScreen
+import com.example.quranapp.presentation.ui.screens.QuranIndexScreen
+import com.example.quranapp.presentation.ui.screens.QuranReadingScreen
+import com.example.quranapp.presentation.ui.screens.SearchScreen
+import com.example.quranapp.presentation.ui.screens.SettingsScreen
+import com.example.quranapp.presentation.ui.screens.SplashScreen
+import com.example.quranapp.presentation.ui.screens.SurahDetailScreen
+import com.example.quranapp.presentation.ui.screens.SurahListScreen
+import com.example.quranapp.presentation.ui.screens.TafsirDetailScreen
+import com.example.quranapp.presentation.ui.screens.TafsirMenuScreen
+import com.example.quranapp.presentation.ui.screens.TafsirSurahListScreen
+import com.example.quranapp.presentation.ui.screens.TasbihCountingScreen
+import com.example.quranapp.presentation.ui.screens.TasbihListScreen
 
 @Composable
 fun SetupNavGraph(navController: NavHostController) {
@@ -105,8 +132,34 @@ fun SetupNavGraph(navController: NavHostController) {
                 categoryId = categoryId
             )
         }
-        composable(Screen.Tasbih.route) {
-            TasbihScreen(navController = navController)
+        composable(Screen.TasbihList.route) {
+            TasbihListScreen(navController = navController)
+        }
+        composable(
+            route = Screen.TasbihCounting.route,
+            arguments = listOf(
+                navArgument("tasbihId") { type = NavType.IntType }
+            )
+        ) {
+            TasbihCountingScreen(navController = navController)
+        }
+        composable(Screen.HadithList.route) {
+            HadithListScreen(navController = navController)
+        }
+        composable(
+            route = Screen.HadithDetail.route,
+            arguments = listOf(
+                navArgument("hadithId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val hadithId = backStackEntry.arguments?.getInt("hadithId") ?: 1
+            HadithDetailScreen(
+                navController = navController,
+                hadithId = hadithId
+            )
+        }
+        composable(Screen.BookmarkedHadiths.route) {
+            BookmarkedHadithsScreen(navController = navController)
         }
         composable(
             route = Screen.TafsirDetail.route,

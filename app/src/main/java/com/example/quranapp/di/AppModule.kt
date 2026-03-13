@@ -21,7 +21,9 @@ import com.example.quranapp.domain.repository.SettingsRepository
 import com.example.quranapp.domain.repository.TafsirRepository
 import com.example.quranapp.domain.repository.TranslationRepository
 import com.example.quranapp.domain.repository.AdhkarRepository
+import com.example.quranapp.data.local.dao.HadithBookmarkDao
 import com.example.quranapp.data.local.dao.AdhkarDao
+import com.example.quranapp.data.local.dao.TasbihDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -97,7 +99,17 @@ object AppModule {
     fun provideAdhkarDao(database: QuranDatabase): AdhkarDao {
         return database.adhkarDao()
     }
-    
+
+    @Provides
+    fun provideHadithBookmarkDao(database: QuranDatabase): HadithBookmarkDao {
+        return database.hadithBookmarkDao()
+    }
+
+    @Provides
+    fun provideTasbihDao(database: QuranDatabase): TasbihDao {
+        return database.tasbihDao()
+    }
+
     @Provides
     @Singleton
     fun provideQuranRepository(
@@ -241,13 +253,13 @@ object AppModule {
     ): QiblaTracker {
         return DefaultQiblaTracker(context)
     }
-
+    
     @Provides
     @Singleton
     fun provideTasbihRepository(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        tasbihDao: TasbihDao
     ): TasbihRepository {
-        return TasbihRepositoryImpl(context)
+        return TasbihRepositoryImpl(context, tasbihDao)
     }
 }
-

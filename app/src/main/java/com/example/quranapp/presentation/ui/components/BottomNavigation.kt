@@ -191,7 +191,9 @@ private fun NavItem(
             style = MaterialTheme.typography.labelSmall,
             color = color,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            fontSize = 10.sp
+            fontSize = 9.sp, // Slightly smaller to ensure fit
+            maxLines = 1,
+            softWrap = false
         )
         }
     }
