@@ -45,5 +45,7 @@ sealed class Screen(val route: String) {
         fun createRoute(surahName: String) = "tafsir_detail/$surahName"
     }
     object BookmarkedHadiths : Screen("bookmarked_hadiths")
+    object TaskHistory : Screen("task_history")
+    object TaskCustomization : Screen("task_customization")
 }
 

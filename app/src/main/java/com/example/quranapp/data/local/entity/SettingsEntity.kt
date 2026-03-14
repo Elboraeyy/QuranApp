@@ -25,6 +25,7 @@ data class SettingsEntity(
     val maghribPreference: String = "ADHAN",
     val ishaPreference: String = "ADHAN",
     val totalTasbihCount: Int = 0,
-    val selectedTasbihPhraseId: Int = 1
+    val selectedTasbihPhraseId: Int = 1,
+    val lastReadPage: Int = 1
 )
 

@@ -19,34 +19,33 @@ class PrayerRepositoryImpl @Inject constructor(
         year: Int
     ): PrayerTimes {
         return try {
-            // Note: Our API is just getPrayerTimings (which returns for today)
-            // If the UI needs a full month, we should use calendar API. But currently
-            // the interface doesn't match the API method. Let's return today's as a fallback.
-            val response = prayerApi.getPrayerTimings(latitude, longitude, method)
-            val timings = response.data.timings
-            val date = response.data.date
-            
-            val hijriStr = "${date.hijri.weekday.ar} ${date.hijri.day} ${date.hijri.month.ar} ${date.hijri.year} هـ"
-            
-            val prayerTime = PrayerTime(
-                date = hijriStr,
-                fajr = timings.fajr,
-                sunrise = timings.sunrise,
-                dhuhr = timings.dhuhr,
-                asr = timings.asr,
-                maghrib = timings.maghrib,
-                isha = timings.isha
-            )
+            val response = prayerApi.getCalendar(latitude, longitude, month, year, method)
+            val times = response.data.map { dayData ->
+                val timings = dayData.timings
+                val date = dayData.date
+                val hijriStr = "${date.hijri.weekday.ar} ${date.hijri.day} ${date.hijri.month.ar} ${date.hijri.year} هـ"
+                
+                PrayerTime(
+                    date = hijriStr,
+                    fajr = timings.fajr,
+                    sunrise = timings.sunrise,
+                    dhuhr = timings.dhuhr,
+                    asr = timings.asr,
+                    maghrib = timings.maghrib,
+                    isha = timings.isha
+                )
+            }
             
             PrayerTimes(
-                location = "Unknown", // Will be resolved by ViewModel
+                location = "Unknown",
                 latitude = latitude,
                 longitude = longitude,
                 timezone = "UTC",
                 method = method,
-                times = listOf(prayerTime)
+                times = times
             )
         } catch (e: Exception) {
+            e.printStackTrace()
             PrayerTimes(
                 location = "Unknown",
                 latitude = latitude,

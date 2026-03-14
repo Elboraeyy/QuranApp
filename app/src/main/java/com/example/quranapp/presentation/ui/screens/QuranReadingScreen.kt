@@ -7,9 +7,12 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -25,6 +28,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,7 +47,11 @@ import com.example.quranapp.presentation.ui.theme.spacing
 import com.example.quranapp.presentation.ui.theme.GreenPrimaryLight
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.quranapp.presentation.viewmodel.SurahDetailViewModel
-import com.example.quranapp.presentation.ui.theme.quranic
+import com.example.quranapp.presentation.viewmodel.AudioPlayerViewModel
+import com.example.quranapp.presentation.ui.theme.ScheherazadeNew
+import com.example.quranapp.presentation.ui.components.AyahQuickView
+import com.example.quranapp.domain.model.Ayah
+import com.example.quranapp.domain.model.QcfVerse
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -52,6 +61,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
+import dev.shreyaspatil.capturable.Capturable
+import dev.shreyaspatil.capturable.controller.rememberCaptureController
+import com.example.quranapp.util.ImageShareUtil
+import androidx.compose.ui.graphics.asAndroidBitmap
 
 fun Number.toArabicNumerals(): String {
     val arabicNumerals = arrayOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
@@ -60,61 +73,188 @@ fun Number.toArabicNumerals(): String {
     }.joinToString("")
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun QuranReadingScreen(
     navController: NavController,
     startPage: Int = 1,
-    viewModel: SurahDetailViewModel = hiltViewModel()
+    viewModel: SurahDetailViewModel = hiltViewModel(),
+    audioViewModel: AudioPlayerViewModel = hiltViewModel()
 ) {
     val surah by viewModel.surah.collectAsState()
     val qcfPage by viewModel.qcfPage.collectAsState()
     val isBookmarked by viewModel.isBookmarked.collectAsState()
     val spacing = MaterialTheme.spacing
-    var isAudioPlayerOpen by remember { mutableStateOf(false) }
     var showOverlay by remember { mutableStateOf(false) }
+    val hapticFeedback = LocalHapticFeedback.current
 
     val errorMessage by viewModel.errorMessage.collectAsState()
 
     val pagerState = rememberPagerState(initialPage = startPage - 1, pageCount = { 604 })
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val captureController = rememberCaptureController()
+
+    // Audio states
+    val isPlaying by audioViewModel.isPlaying.collectAsState()
+    val currentAyahIndex by audioViewModel.currentAyahIndex.collectAsState()
+    val isPageMode by audioViewModel.isPageMode.collectAsState()
+    val currentPageAyahs by audioViewModel.currentPageAyahs.collectAsState()
+    val selectedReciterName by audioViewModel.selectedReciterName.collectAsState()
+
+    // Quick View states
+    var selectedAyah by remember { mutableStateOf<Ayah?>(null) }
+    var selectedAyahSurahName by remember { mutableStateOf("") }
+    var tafsirText by remember { mutableStateOf<String?>(null) }
+    var meaningsText by remember { mutableStateOf<String?>(null) }
+    var showQuickView by remember { mutableStateOf(false) }
+    var showReciterPicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(pagerState.currentPage) {
         viewModel.loadPage(pagerState.currentPage + 1)
     }
 
+    // Auto-page-turn when page audio completes
+    LaunchedEffect(Unit) {
+        audioViewModel.pageCompleted.collect {
+            val nextPage = pagerState.currentPage + 1
+            if (nextPage < 604) {
+                pagerState.animateScrollToPage(nextPage)
+                // After page loads, start playing the new page
+                kotlinx.coroutines.delay(800)
+                viewModel.qcfPage.value?.let { page ->
+                    audioViewModel.playPage(page.verses)
+                }
+            }
+        }
+    }
+
     val surahNameToDisplay = surah?.nameArabic ?: ""
 
-    // Juz start pages (standard Mushaf)
+    val surahNames = remember {
+        listOf(
+            "الفاتحة","البقرة","آل عمران","النساء","المائدة","الأنعام","الأعراف","الأنفال","التوبة","يونس",
+            "هود","يوسف","الرعد","إبراهيم","الحجر","النحل","الإسراء","الكهف","مريم","طه",
+            "الأنبياء","الحج","المؤمنون","النور","الفرقان","الشعراء","النمل","القصص","العنكبوت","الروم",
+            "لقمان","السجدة","الأحزاب","سبأ","فاطر","يس","الصافات","ص","الزمر","غافر",
+            "فصلت","الشورى","الزخرف","الدخان","الجاثية","الأحقاف","محمد","الفتح","الحجرات","ق",
+            "الذاريات","الطور","النجم","القمر","الرحمن","الواقعة","الحديد","المجادلة","الحشر","الممتحنة",
+            "الصف","الجمعة","المنافقون","التغابن","الطلاق","التحريم","الملك","القلم","الحاقة","المعارج",
+            "نوح","الجن","المزمل","المدثر","القيامة","الإنسان","المرسلات","النبأ","النازعات","عبس",
+            "التكوير","الانفطار","المطففين","الانشقاق","البروج","الطارق","الأعلى","الغاشية","الفجر","البلد",
+            "الشمس","الليل","الضحى","الشرح","التين","العلق","القدر","البينة","الزلزلة","العاديات",
+            "القارعة","التكاثر","العصر","الهمزة","الفيل","قريش","الماعون","الكوثر","الكافرون","النصر",
+            "المسد","الإخلاص","الفلق","الناس"
+        )
+    }
+
     val juzStartPages = remember {
         listOf(1,22,42,62,82,102,122,142,162,182,202,222,242,262,282,302,322,332,342,362,382,402,422,442,462,482,502,522,542,562,582,604)
     }
 
-    // Calculate current juz based on page number
+    val surahPages = remember {
+        listOf(
+            1,2,50,77,106,128,151,177,187,208,221,235,249,255,262,267,282,293,305,312,
+            322,332,342,350,359,367,377,385,396,404,411,415,418,428,434,440,446,453,458,467,
+            477,483,489,496,499,502,507,511,515,518,520,523,526,528,531,534,537,542,545,549,
+            551,553,554,556,558,560,562,564,566,568,570,572,574,575,577,578,580,582,583,585,
+            586,587,587,589,590,591,591,592,593,594,595,595,596,596,597,597,598,598,599,599,
+            600,600,601,601,601,602,602,602,603,603,603,604,604,604
+        )
+    }
+
     val currentPage = pagerState.currentPage + 1
     val currentJuz = remember(currentPage) {
         juzStartPages.indexOfLast { currentPage >= it } + 1
     }
 
-    // Dialog states
     var showSurahPicker by remember { mutableStateOf(false) }
     var showJuzPicker by remember { mutableStateOf(false) }
     var showPagePicker by remember { mutableStateOf(false) }
 
-    // Full-screen layout with overlays
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .clickable(
-                indication = null,
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-            ) { showOverlay = !showOverlay }
+    // Map verses to help identify which ayah a line belongs to
+    val pageVerses = qcfPage?.verses ?: emptyList()
+
+    data class AyahPlacement(
+        val verse: QcfVerse,
+        val startIndex: Int,
+        val endIndex: Int
+    )
+
+    // Build a mapping: for each QCF line that is NOT a header, figure out
+
+    val lineToAyahsMap = remember(qcfPage) {
+        val map = mutableMapOf<Int, List<AyahPlacement>>()
+        val textLines = qcfPage?.lines?.filter { it.surahNumber == null && !it.isBismillah }?.sortedBy { it.lineNumber } ?: emptyList()
+        val verses = qcfPage?.verses?.sortedBy { it.id } ?: emptyList()
+        
+        if (textLines.isNotEmpty() && verses.isNotEmpty()) {
+            var currentVerseIndex = 0
+            var verseCharIndex = 0
+            var currentVerseCode = verses.getOrNull(0)?.codeV1?.replace(" ", "") ?: ""
+            
+            for (line in textLines) {
+                val placements = mutableListOf<AyahPlacement>()
+                val originalText = line.text
+                var lineCharIndex = 0
+                var currentPlacementStart = 0
+                
+                while (lineCharIndex < originalText.length && currentVerseIndex < verses.size) {
+                    val char = originalText[lineCharIndex]
+                    if (char == ' ' || char == '\n' || char == '\r') {
+                        if (currentPlacementStart == lineCharIndex) {
+                            currentPlacementStart++
+                        }
+                        lineCharIndex++
+                        continue
+                    }
+                    
+                    val currentVerse = verses[currentVerseIndex]
+                    verseCharIndex++
+                    lineCharIndex++
+                    
+                    if (verseCharIndex >= currentVerseCode.length) {
+                        placements.add(AyahPlacement(currentVerse, currentPlacementStart, lineCharIndex))
+                        currentVerseIndex++
+                        if (currentVerseIndex < verses.size) {
+                            currentVerseCode = verses[currentVerseIndex].codeV1.replace(" ", "")
+                            verseCharIndex = 0
+                            currentPlacementStart = lineCharIndex
+                        }
+                    }
+                }
+                
+                if (currentPlacementStart < originalText.length && currentVerseIndex < verses.size) {
+                    placements.add(AyahPlacement(verses[currentVerseIndex], currentPlacementStart, originalText.length))
+                }
+                
+                map[line.lineNumber] = placements
+            }
+        }
+        map
+    }
+
+    // Full-screen layout
+    Capturable(
+        controller = captureController,
+        onCaptured = { bitmap, error ->
+            if (bitmap != null) {
+                ImageShareUtil.shareBitmap(context, bitmap.asAndroidBitmap())
+            }
+        }
     ) {
-        // Main content: Header + Pager
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { showOverlay = !showOverlay }
+                )
+            }
+    ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // SURAH / JUZ HEADER — always visible
+            // SURAH / JUZ HEADER
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 Row(
                     modifier = Modifier
@@ -123,7 +263,6 @@ fun QuranReadingScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Surah Name (Right side in RTL)
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = Color(0xFFC9A24D).copy(alpha = 0.15f),
@@ -140,7 +279,6 @@ fun QuranReadingScreen(
                         )
                     }
                     
-                    // Juz Number (Left side in RTL)
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = Color(0xFFC9A24D).copy(alpha = 0.15f),
@@ -159,16 +297,16 @@ fun QuranReadingScreen(
                 }
             }
 
-            // QURAN PAGER — fills remaining space
+            // QURAN PAGER
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxWidth()
+                        .weight(1f)
                 ) { pageIndex ->
                     val actualPage = pageIndex + 1
 
-                    // Load page-specific QCF font
                     val fontPath = String.format("fonts/QCF_P%03d.TTF", actualPage)
                     val typeface = remember(actualPage) {
                         try {
@@ -178,32 +316,7 @@ fun QuranReadingScreen(
                         }
                     }
                     val qcfFontFamily = remember(typeface) { FontFamily(ComposeTypeface(typeface)) }
-                    
-                    val bismillahTypeface = remember {
-                        try {
-                            Typeface.createFromAsset(context.assets, "fonts/me_quran.ttf")
-                        } catch (e: Exception) {
-                            Typeface.DEFAULT
-                        }
-                    }
-                    val bismillahFontFamily = remember(bismillahTypeface) { FontFamily(ComposeTypeface(bismillahTypeface)) }
 
-                    val surahsList = remember {
-                        try {
-                            val jsonString = context.assets.open("surahs.json").bufferedReader().use { it.readText() }
-                            val jsonArray = org.json.JSONArray(jsonString)
-                            val map = mutableMapOf<Int, String>()
-                            for (i in 0 until jsonArray.length()) {
-                                val obj = jsonArray.getJSONObject(i)
-                                map[obj.getInt("number")] = obj.getString("name")
-                            }
-                            map
-                        } catch (e: Exception) {
-                            emptyMap<Int, String>()
-                        }
-                    }
-
-                    // Render page lines
                     if (qcfPage?.pageNumber == actualPage && qcfPage?.lines?.isNotEmpty() == true) {
                         BoxWithConstraints(
                             modifier = Modifier.fillMaxSize(),
@@ -214,56 +327,128 @@ fun QuranReadingScreen(
                             val lineHeight = fontSize * 1.8f
 
                             Column(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 8.dp, top = 0.dp, end = 8.dp, bottom = 64.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
+                                verticalArrangement = Arrangement.Top
                             ) {
                                 qcfPage?.lines?.forEach { line ->
                                     if (line.isBismillah) {
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(vertical = 4.dp),
+                                                .padding(top = 0.dp, bottom = 4.dp),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            AsyncImage(
-                                                model = ImageRequest.Builder(LocalContext.current)
-                                                    .data("file:///android_asset/surah_names/0.svg")
-                                                    .decoderFactory(SvgDecoder.Factory())
-                                                    .build(),
-                                                contentDescription = "Bismillah",
-                                                modifier = Modifier.fillMaxWidth(0.9f).heightIn(max = 40.dp),
-                                                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                                            Text(
+                                                text = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+                                                fontFamily = ScheherazadeNew,
+                                                fontSize = 22.sp,
+                                                color = MaterialTheme.colorScheme.onBackground
                                             )
                                         }
                                     } else if (line.surahNumber != null && line.surahNumber!! > 0) {
+                                        val surahIdx = line.surahNumber!! - 1
+                                        val sName = if (surahIdx in surahNames.indices) surahNames[surahIdx] else ""
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(vertical = 4.dp),
+                                                .padding(top = 8.dp, bottom = 4.dp),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            AsyncImage(
-                                                model = ImageRequest.Builder(LocalContext.current)
-                                                    .data("file:///android_asset/surah_names/${line.surahNumber}.svg")
-                                                    .decoderFactory(SvgDecoder.Factory())
-                                                    .build(),
-                                                contentDescription = "Surah Name",
-                                                modifier = Modifier.fillMaxWidth().heightIn(max = 60.dp),
-                                                contentScale = androidx.compose.ui.layout.ContentScale.Fit
-                                            )
+                                            Box(
+                                                modifier = Modifier.fillMaxWidth(0.85f).height(45.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                AsyncImage(
+                                                    model = ImageRequest.Builder(LocalContext.current)
+                                                        .data("file:///android_asset/surah_frame.svg")
+                                                        .decoderFactory(SvgDecoder.Factory())
+                                                        .build(),
+                                                    contentDescription = "Surah Frame",
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    contentScale = androidx.compose.ui.layout.ContentScale.FillBounds,
+                                                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(MaterialTheme.colorScheme.onBackground)
+                                                )
+                                                Text(
+                                                    text = "سُورَةُ $sName",
+                                                    fontFamily = ScheherazadeNew,
+                                                    fontSize = 24.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onBackground,
+                                                    modifier = Modifier.padding(bottom = 6.dp)
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        // Determine if this line contains the currently playing ayah
+                                        val placementsOnLine = lineToAyahsMap[line.lineNumber] ?: emptyList()
+                                        val playingAyah = if (isPageMode && currentAyahIndex >= 0) currentPageAyahs.getOrNull(currentAyahIndex) else null
+
+                                        val annotatedString = androidx.compose.ui.text.buildAnnotatedString {
+                                            append(line.text)
+                                            if (playingAyah != null) {
+                                                for (placement in placementsOnLine) {
+                                                    if (placement.verse.surahNumber == playingAyah.surahNumber &&
+                                                        placement.verse.ayahNumber == playingAyah.ayahNumber) {
+                                                        
+                                                        addStyle(
+                                                            style = androidx.compose.ui.text.SpanStyle(
+                                                                background = Color(0xFFC9A24D).copy(alpha = 0.25f),
+                                                                color = GreenPrimaryLight
+                                                            ),
+                                                            start = placement.startIndex.coerceAtLeast(0),
+                                                            end = placement.endIndex.coerceAtMost(line.text.length)
+                                                        )
+                                                    }
+                                                }
+                                            }
                                         }
 
-                                    } else {
                                         Text(
-                                            text = line.text,
+                                            text = annotatedString,
                                             fontFamily = qcfFontFamily,
                                             fontSize = fontSize,
                                             lineHeight = lineHeight,
                                             textAlign = TextAlign.Center,
                                             color = MaterialTheme.colorScheme.onBackground,
                                             maxLines = 1,
-                                            modifier = Modifier.fillMaxWidth()
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .pointerInput(Unit) {
+                                                    detectTapGestures(
+                                                        onTap = { showOverlay = !showOverlay },
+                                                        onLongPress = { offset ->
+                                                            // Long press — identify the ayah and show quick view
+                                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                            val placement = placementsOnLine.firstOrNull()
+                                                            placement?.verse?.let { verse ->
+                                                                scope.launch {
+                                                                    tafsirText = null
+                                                                    meaningsText = null
+                                                                    val ayahData = viewModel.getAyahForQuickView(
+                                                                        verse.surahNumber,
+                                                                        verse.ayahNumber
+                                                                    )
+                                                                    if (ayahData != null) {
+                                                                        selectedAyah = ayahData
+                                                                        val surahData = viewModel.getSurahName(verse.surahNumber)
+                                                                        selectedAyahSurahName = surahData ?: ""
+                                                                        
+                                                                        // Show modal immediately, then fetch tafsir/meanings
+                                                                        showQuickView = true
+                                                                        
+                                                                        // Fetch Tafsir (Jalalayn)
+                                                                        tafsirText = viewModel.getTafsirText(verse.surahNumber, verse.ayahNumber, "ar.jalalayn")
+                                                                        // Fetch Meanings (Muyassar)
+                                                                        meaningsText = viewModel.getTafsirText(verse.surahNumber, verse.ayahNumber, "ar.muyassar")
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    )
+                                                }
                                         )
                                     }
                                 }
@@ -278,32 +463,34 @@ fun QuranReadingScreen(
             }
         }
 
-        // 2. PAGE NUMBER — always visible at the bottom
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp)
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+        // PAGE NUMBER — bottom center
+        if (!isPageMode || !isPlaying) {
+            Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .clickable { showPagePicker = true },
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = (pagerState.currentPage + 1).toArabicNumerals(),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = GreenPrimaryLight,
-                        fontWeight = FontWeight.Bold
-                    )
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFFC9A24D).copy(alpha = 0.15f),
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .clickable { showPagePicker = true },
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = (pagerState.currentPage + 1).toArabicNumerals(),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = GreenPrimaryLight,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
 
-        // 3. TOP BAR OVERLAY — appears/disappears on tap
+        // TOP BAR OVERLAY
         AnimatedVisibility(
             visible = showOverlay,
             enter = slideInVertically(initialOffsetY = { -it }),
@@ -318,12 +505,11 @@ fun QuranReadingScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = spacing.gridMargin, vertical = 12.dp)
-                        .padding(top = 32.dp), // status bar padding
+                        .padding(horizontal = spacing.gridMargin, vertical = 8.dp)
+                        .padding(top = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Back Button
                     Surface(
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.surface,
@@ -338,7 +524,6 @@ fun QuranReadingScreen(
                         }
                     }
 
-                    // Surah Name
                     Text(
                         text = surahNameToDisplay,
                         style = MaterialTheme.typography.titleMedium,
@@ -346,7 +531,6 @@ fun QuranReadingScreen(
                         fontWeight = FontWeight.Bold
                     )
 
-                    // Action Buttons
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         // Share
                         Surface(
@@ -355,13 +539,11 @@ fun QuranReadingScreen(
                             modifier = Modifier.size(40.dp)
                         ) {
                             IconButton(onClick = {
-                                val shareText = "استمع واقرأ سورة ${surah?.nameArabic ?: ""} عبر تطبيق زاد مسلم"
-                                val sendIntent = android.content.Intent().apply {
-                                    action = android.content.Intent.ACTION_SEND
-                                    putExtra(android.content.Intent.EXTRA_TEXT, shareText)
-                                    type = "text/plain"
+                                showOverlay = false
+                                scope.launch {
+                                    kotlinx.coroutines.delay(350) // wait for exit animation
+                                    captureController.capture()
                                 }
-                                context.startActivity(android.content.Intent.createChooser(sendIntent, "مشاركة"))
                             }) {
                                 Icon(imageVector = Icons.Default.Share, contentDescription = "Share", tint = GreenPrimaryLight)
                             }
@@ -380,17 +562,26 @@ fun QuranReadingScreen(
                                 )
                             }
                         }
-                        // Audio
+                        // Audio Play
                         Surface(
                             shape = CircleShape,
-                            color = if (isAudioPlayerOpen) MaterialTheme.colorScheme.error.copy(alpha = 0.1f) else Color(0xFFC9A24D).copy(alpha = 0.1f),
+                            color = if (isPageMode && isPlaying) GreenPrimaryLight.copy(alpha = 0.2f) else Color(0xFFC9A24D).copy(alpha = 0.1f),
                             modifier = Modifier.size(40.dp)
                         ) {
-                            IconButton(onClick = { isAudioPlayerOpen = !isAudioPlayerOpen }) {
+                            IconButton(onClick = {
+                                if (isPageMode && isPlaying) {
+                                    audioViewModel.stop()
+                                } else {
+                                    qcfPage?.let { page ->
+                                        audioViewModel.playPage(page.verses)
+                                    }
+                                }
+                                showOverlay = false
+                            }) {
                                 Icon(
-                                    imageVector = if (isAudioPlayerOpen) Icons.Default.Close else Icons.Default.Headphones,
-                                    contentDescription = if (isAudioPlayerOpen) "Close Audio" else "Listen",
-                                    tint = if (isAudioPlayerOpen) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground
+                                    imageVector = if (isPageMode && isPlaying) Icons.Default.Stop else Icons.Default.Headphones,
+                                    contentDescription = "Audio",
+                                    tint = if (isPageMode && isPlaying) GreenPrimaryLight else MaterialTheme.colorScheme.onBackground
                                 )
                             }
                         }
@@ -399,67 +590,173 @@ fun QuranReadingScreen(
             }
         }
 
-        // 4. BOTTOM BAR OVERLAY — appears/disappears on tap
+        // AUDIO CONTROL BAR — appears when page audio is playing
         AnimatedVisibility(
-            visible = showOverlay,
+            visible = isPageMode,
             enter = slideInVertically(initialOffsetY = { it }),
             exit = slideOutVertically(targetOffsetY = { it }),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            Column {
-                QuranReadingFooter(
-                    surahNameToDisplay = surahNameToDisplay,
-                    sliderPosition = (pagerState.currentPage.toFloat() / 603f),
-                    onSliderValueChange = { /* Could navigate to specific page */ }
-                )
+            Surface(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+                shadowElevation = 16.dp,
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Progress info
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Reciter name (clickable to change)
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = GreenPrimaryLight.copy(alpha = 0.08f),
+                            modifier = Modifier.clickable { showReciterPicker = true }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    tint = GreenPrimaryLight,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = selectedReciterName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = GreenPrimaryLight,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+
+                        // Ayah counter
+                        Text(
+                            text = if (currentPageAyahs.isNotEmpty()) {
+                                "آية ${(currentAyahIndex + 1).coerceAtLeast(1).toArabicNumerals()} من ${currentPageAyahs.size.toArabicNumerals()}"
+                            } else "",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Controls row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Close
+                        IconButton(onClick = { audioViewModel.stop() }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Stop",
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        // Previous ayah
+                        IconButton(onClick = { audioViewModel.previous() }) {
+                            Icon(
+                                Icons.Default.SkipPrevious,
+                                contentDescription = "Previous",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        // Play/Pause
+                        Surface(
+                            shape = CircleShape,
+                            color = GreenPrimaryLight,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            IconButton(onClick = {
+                                if (isPlaying) audioViewModel.pause()
+                                else audioViewModel.resume()
+                            }) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = if (isPlaying) "Pause" else "Play",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+
+                        // Next ayah
+                        IconButton(onClick = { audioViewModel.next() }) {
+                            Icon(
+                                Icons.Default.SkipNext,
+                                contentDescription = "Next",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        // Repeat (placeholder)
+                        IconButton(onClick = { /* TODO: repeat mode */ }) {
+                            Icon(
+                                Icons.Default.Repeat,
+                                contentDescription = "Repeat",
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
             }
         }
-
-        // 5. AUDIO PLAYER OVERLAY
-        AnimatedVisibility(
-            visible = isAudioPlayerOpen,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            QuranAudioPlayerOverlay(
-                surahNumber = surah?.number ?: 1,
-                onClose = { isAudioPlayerOpen = false }
-            )
         }
     }
 
-    // Surah names for the picker
-    val surahNames = remember {
-        listOf(
-            "الفاتحة","البقرة","آل عمران","النساء","المائدة","الأنعام","الأعراف","الأنفال","التوبة","يونس",
-            "هود","يوسف","الرعد","إبراهيم","الحجر","النحل","الإسراء","الكهف","مريم","طه",
-            "الأنبياء","الحج","المؤمنون","النور","الفرقان","الشعراء","النمل","القصص","العنكبوت","الروم",
-            "لقمان","السجدة","الأحزاب","سبأ","فاطر","يس","الصافات","ص","الزمر","غافر",
-            "فصلت","الشورى","الزخرف","الدخان","الجاثية","الأحقاف","محمد","الفتح","الحجرات","ق",
-            "الذاريات","الطور","النجم","القمر","الرحمن","الواقعة","الحديد","المجادلة","الحشر","الممتحنة",
-            "الصف","الجمعة","المنافقون","التغابن","الطلاق","التحريم","الملك","القلم","الحاقة","المعارج",
-            "نوح","الجن","المزمل","المدثر","القيامة","الإنسان","المرسلات","النبأ","النازعات","عبس",
-            "التكوير","الانفطار","المطففين","الانشقاق","البروج","الطارق","الأعلى","الغاشية","الفجر","البلد",
-            "الشمس","الليل","الضحى","الشرح","التين","العلق","القدر","البينة","الزلزلة","العاديات",
-            "القارعة","التكاثر","العصر","الهمزة","الفيل","قريش","الماعون","الكوثر","الكافرون","النصر",
-            "المسد","الإخلاص","الفلق","الناس"
+    // QUICK VIEW BOTTOM SHEET
+    if (showQuickView) {
+        AyahQuickView(
+            ayah = selectedAyah,
+            surahName = selectedAyahSurahName,
+            tafsirText = tafsirText,
+            meaningsText = meaningsText,
+            onDismiss = { showQuickView = false },
+            onPlayAyah = {
+                selectedAyah?.let { ayah ->
+                    audioViewModel.playAyah(ayah.surahNumber, ayah.numberInSurah)
+                }
+            },
+            onBookmark = {
+                viewModel.toggleBookmark()
+            },
+            isBookmarked = isBookmarked
         )
     }
 
-    // Surah start pages mapping
-    val surahPages = remember {
-        listOf(
-            1,2,50,77,106,128,151,177,187,208,221,235,249,255,262,267,282,293,305,312,
-            322,332,342,350,359,367,377,385,396,404,411,415,418,428,434,440,446,453,458,467,
-            477,483,489,496,499,502,507,511,515,518,520,523,526,528,531,534,537,542,545,549,
-            551,553,554,556,558,560,562,564,566,568,570,572,574,575,577,578,580,582,583,585,
-            586,587,587,589,590,591,591,592,593,594,595,595,596,596,597,597,598,598,599,599,
-            600,600,601,601,601,602,602,602,603,603,603,604,604,604
+    // RECITER PICKER - Bottom Sheet
+    if (showReciterPicker) {
+        ReciterPickerSheet(
+            onDismiss = { showReciterPicker = false },
+            onReciterSelected = { reciterId ->
+                audioViewModel.changeReciter(reciterId)
+                showReciterPicker = false
+            }
         )
     }
 
-    // EXTRACTED PREMIUM PICKERS
+    // PREMIUM PICKER DIALOGS
     if (showSurahPicker) {
         PremiumSearchDialog(
             title = "اختر السورة",
@@ -563,7 +860,90 @@ fun QuranReadingScreen(
     }
 }
 
-// Reusable Premium Dialog Component with Search
+// ─── Reciter Picker ─────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReciterPickerSheet(
+    onDismiss: () -> Unit,
+    onReciterSelected: (String) -> Unit
+) {
+    val reciters = remember {
+        listOf(
+            "abdul_basit" to "عبد الباسط عبد الصمد",
+            "al_hudhaifi" to "صالح الهذيفي",
+            "al_minshawi" to "محمد صديق المنشاوي",
+            "mishary_alfasy" to "مشاري العفاسي",
+            "saad_al_ghamdi" to "سعد الغامدي"
+        )
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = "اختر القارئ",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = GreenPrimaryLight,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            reciters.forEach { (id, name) ->
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.background,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clickable { onReciterSelected(id) }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = GreenPrimaryLight.copy(alpha = 0.1f),
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = null,
+                                tint = GreenPrimaryLight,
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontFamily = ScheherazadeNew,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── Premium Search Dialog (reused from before) ─────────────
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PremiumSearchDialog(
@@ -586,7 +966,6 @@ fun PremiumSearchDialog(
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     LaunchedEffect(Unit) {
         if (initialScrollIndex in 0 until itemsCount) {
-            // Subtracting 2 to roughly center the selected item, max out at 0 so it doesn't crash on negative indices
             val targetIndex = maxOf(0, initialScrollIndex - 2)
             listState.scrollToItem(targetIndex)
         }
@@ -595,7 +974,7 @@ fun PremiumSearchDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(24.dp), // Extremely rounded for premium feel
+        shape = RoundedCornerShape(24.dp),
         title = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
@@ -607,7 +986,6 @@ fun PremiumSearchDialog(
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                // Search Field
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                     OutlinedTextField(
                         value = searchQuery,
@@ -664,6 +1042,8 @@ fun PremiumSearchDialog(
     )
 }
 
+// ─── Footer and Audio Overlay (kept for backward compat) ────
+
 @Composable
 fun QuranReadingFooter(
     surahNameToDisplay: String,
@@ -672,7 +1052,7 @@ fun QuranReadingFooter(
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 16.dp, // Premium elevation
+        shadowElevation = 16.dp,
         shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -682,7 +1062,6 @@ fun QuranReadingFooter(
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Dropdown Indicator
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
@@ -702,13 +1081,11 @@ fun QuranReadingFooter(
                 )
             }
 
-            // Slider & Navigation
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Up Arrow
                 Surface(
                     shape = CircleShape,
                     color = Color(0xFFC9A24D).copy(alpha = 0.15f),
@@ -722,7 +1099,6 @@ fun QuranReadingFooter(
                     )
                 }
 
-                // Slider
                 Slider(
                     value = sliderPosition,
                     onValueChange = onSliderValueChange,
@@ -736,7 +1112,6 @@ fun QuranReadingFooter(
                     )
                 )
 
-                // Down Arrow
                 Surface(
                     shape = CircleShape,
                     color = Color(0xFFC9A24D).copy(alpha = 0.15f),
@@ -751,7 +1126,7 @@ fun QuranReadingFooter(
                 }
             }
             
-            Spacer(modifier = Modifier.height(8.dp)) // Safe area bottom padding
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
@@ -760,7 +1135,7 @@ fun QuranReadingFooter(
 fun QuranAudioPlayerOverlay(
     surahNumber: Int,
     onClose: () -> Unit,
-    viewModel: com.example.quranapp.presentation.viewmodel.AudioPlayerViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    viewModel: AudioPlayerViewModel = hiltViewModel()
 ) {
     val isPlaying by viewModel.isPlaying.collectAsState()
     val currentPosition by viewModel.currentPosition.collectAsState()
@@ -785,7 +1160,6 @@ fun QuranAudioPlayerOverlay(
                 .padding(horizontal = 24.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Dropdown Indicator for Audio
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
                 contentDescription = "Close",
@@ -797,7 +1171,6 @@ fun QuranAudioPlayerOverlay(
             
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Progress Bar & Time
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -837,7 +1210,6 @@ fun QuranAudioPlayerOverlay(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Playback Controls
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -881,61 +1253,6 @@ fun QuranAudioPlayerOverlay(
                 Icon(imageVector = Icons.Default.HeadsetMic, contentDescription = "Audio Settings", tint = GreenPrimaryLight)
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Reciter Selection Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Language Toggle (Placeholder)
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
-                ) {
-                    Row(modifier = Modifier.padding(2.dp)) {
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.padding(2.dp)
-                        ) {
-                            Text(
-                                text = "العربية",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSecondary,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                            )
-                        }
-                        Text(
-                            text = "الإنجليزية",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                        )
-                    }
-                }
-                
-                Text(
-                    text = "إختر القارئ",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Reciters List
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                ReciterCard(name = "عبدالباسط عبد الصمد", isSelected = true, modifier = Modifier.weight(1f))
-                ReciterCard(name = "ماهر المعيقلي", isSelected = false, modifier = Modifier.weight(1f))
-            }
-            
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
@@ -945,12 +1262,11 @@ fun QuranAudioPlayerOverlay(
 fun ReciterCard(name: String, isSelected: Boolean, modifier: Modifier = Modifier) {
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = Color.DarkGray, // Placeholder for image background
+        color = Color.DarkGray,
         border = if (isSelected) BorderStroke(2.dp, GreenPrimaryLight) else null,
-        modifier = modifier.aspectRatio(1f) // Square
+        modifier = modifier.aspectRatio(1f)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Placeholder Image overlay
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
             
             if (isSelected) {

@@ -29,7 +29,8 @@ fun SettingsEntity.toDomain(): AppSettings {
         maghribPreference = AdhanPreference.valueOf(maghribPreference),
         ishaPreference = AdhanPreference.valueOf(ishaPreference),
         totalTasbihCount = totalTasbihCount,
-        selectedTasbihPhraseId = selectedTasbihPhraseId
+        selectedTasbihPhraseId = selectedTasbihPhraseId,
+        lastReadPage = lastReadPage
     )
 }
 
@@ -54,7 +55,8 @@ fun AppSettings.toEntity(): SettingsEntity {
         maghribPreference = maghribPreference.name,
         ishaPreference = ishaPreference.name,
         totalTasbihCount = totalTasbihCount,
-        selectedTasbihPhraseId = selectedTasbihPhraseId
+        selectedTasbihPhraseId = selectedTasbihPhraseId,
+        lastReadPage = lastReadPage
     )
 }
 

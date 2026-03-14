@@ -417,7 +417,11 @@ fun PrayerTimeColumn(name: String, time: String, isNext: Boolean = false) {
 }
 
 @Composable
-fun ToolsSection(navController: NavController) {
+fun ToolsSection(
+    navController: NavController,
+    viewModel: SettingsViewModel = hiltViewModel()
+) {
+    val settings by viewModel.settings.collectAsState()
     Column(modifier = Modifier.fillMaxWidth()) {
         // Section Header
         Row(
@@ -467,7 +471,10 @@ fun ToolsSection(navController: NavController) {
                 ToolCard(
                 title = "القرآن الكريم",
                     icon = Icons.AutoMirrored.Filled.MenuBook,
-                    onClick = { navController.navigate(Screen.QuranIndex.route) },
+                    onClick = { 
+                        val page = settings.lastReadPage
+                        navController.navigate(Screen.QuranReading.createRoute(if (page > 0) page else 1)) 
+                    },
                     modifier = Modifier.width(110.dp)
                 )
             }

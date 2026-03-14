@@ -15,7 +15,9 @@ import javax.inject.Inject
 @HiltViewModel
 class SurahDetailViewModel @Inject constructor(
     private val quranRepository: QuranRepository,
-    private val bookmarkRepository: BookmarkRepository
+    private val bookmarkRepository: BookmarkRepository,
+    private val settingsRepository: com.example.quranapp.domain.repository.SettingsRepository,
+    private val tafsirRepository: com.example.quranapp.domain.repository.TafsirRepository
 ) : ViewModel() {
 
     private val _surah = MutableStateFlow<com.example.quranapp.domain.model.Surah?>(null)
@@ -83,6 +85,7 @@ class SurahDetailViewModel @Inject constructor(
                    _surah.value = quranRepository.getSurahByNumber(verse.surahNumber)
                 }
 
+                settingsRepository.updateLastReadPage(pageNumber)
                 checkIfBookmarkedPage()
             } catch (e: Exception) {
                 _errorMessage.value = e.message ?: "Failed to load Page"
@@ -95,36 +98,54 @@ class SurahDetailViewModel @Inject constructor(
     private suspend fun checkIfBookmarkedPage() {
         val firstVerse = _qcfPage.value?.verses?.firstOrNull()
         if (firstVerse != null) {
-            _isBookmarked.value = bookmarkRepository.isBookmarked(firstVerse.surahNumber, firstVerse.ayahNumber)
+            _isBookmarked.value = bookmarkRepository.isBookmarked(firstVerse.surahNumber, 1)
         }
     }
 
     fun toggleBookmark() {
         viewModelScope.launch {
-            if (_qcfPage.value != null) {
-                val firstVerse = _qcfPage.value?.verses?.firstOrNull() ?: return@launch
-                if (_isBookmarked.value) {
-                    val existing = bookmarkRepository.getBookmark(firstVerse.surahNumber, firstVerse.ayahNumber)
-                    existing?.let { bookmarkRepository.deleteBookmark(it) }
-                    _isBookmarked.value = false
-                } else {
-                    bookmarkRepository.addBookmark(
-                        Bookmark(surahNumber = firstVerse.surahNumber, ayahNumber = firstVerse.ayahNumber, page = currentPageNumber)
-                    )
-                    _isBookmarked.value = true
-                }
+            val surahNum = _qcfPage.value?.verses?.firstOrNull()?.surahNumber ?: currentSurahNumber
+            val pageToMark = _qcfPage.value?.pageNumber ?: 1
+            if (_isBookmarked.value) {
+                val existing = bookmarkRepository.getBookmark(surahNum, 1)
+                existing?.let { bookmarkRepository.deleteBookmark(it) }
+                _isBookmarked.value = false
             } else {
-                if (_isBookmarked.value) {
-                    val existing = bookmarkRepository.getBookmark(currentSurahNumber, 1)
-                    existing?.let { bookmarkRepository.deleteBookmark(it) }
-                    _isBookmarked.value = false
-                } else {
-                    bookmarkRepository.addBookmark(
-                        Bookmark(surahNumber = currentSurahNumber, ayahNumber = 1, page = 1)
-                    )
-                    _isBookmarked.value = true
-                }
+                bookmarkRepository.addBookmark(
+                    Bookmark(surahNumber = surahNum, ayahNumber = 1, page = pageToMark)
+                )
+                _isBookmarked.value = true
             }
+        }
+    }
+
+    // --- Quick View helpers ---
+    suspend fun getAyahForQuickView(surahNumber: Int, ayahNumber: Int): com.example.quranapp.domain.model.Ayah? {
+        return try {
+            quranRepository.getAyah(surahNumber, ayahNumber)
+                ?: run {
+                    // If not cached locally, fetch surah ayahs first
+                    quranRepository.getAyahsBySurah(surahNumber)
+                    quranRepository.getAyah(surahNumber, ayahNumber)
+                }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun getSurahName(surahNumber: Int): String? {
+        return try {
+            quranRepository.getSurahByNumber(surahNumber)?.nameArabic
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun getTafsirText(surahNumber: Int, ayahNumber: Int, tafsirId: String = "ar.jalalayn"): String? {
+        return try {
+            tafsirRepository.getTafsirText(surahNumber, ayahNumber, tafsirId)?.text
+        } catch (e: Exception) {
+            null
         }
     }
 }

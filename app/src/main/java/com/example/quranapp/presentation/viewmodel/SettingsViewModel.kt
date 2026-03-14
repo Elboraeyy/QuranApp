@@ -44,4 +44,8 @@ class SettingsViewModel @Inject constructor(
     fun updateAdhanPreference(prayerId: Int, preference: AdhanPreference) {
         viewModelScope.launch { repository.updateAdhanPreference(prayerId, preference) }
     }
+
+    fun updateLastReadPage(page: Int) {
+        viewModelScope.launch { repository.updateLastReadPage(page) }
+    }
 }

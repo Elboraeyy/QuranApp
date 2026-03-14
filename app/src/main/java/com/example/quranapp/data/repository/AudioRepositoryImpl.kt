@@ -7,11 +7,11 @@ import javax.inject.Inject
 class AudioRepositoryImpl @Inject constructor() : AudioRepository {
 
     private val recitersStatic: List<Reciter> = listOf(
-        Reciter("abdul_basit", "Abdul Basit", "عبد الباسط عبد الصمد", "https://server7.mp3quran.net/abd_basit/", "Hafs"),
-        Reciter("al_hudhaifi", "Al-Hudhaifi", "صالح الهذيفي", "https://server7.mp3quran.net/hud/", "Hafs"),
-        Reciter("al_minshawi", "Al-Minshawi", "محمد صديق المنشاوي", "https://server7.mp3quran.net/minsh/", "Hafs"),
-        Reciter("mishary_alfasy", "Mishary Alafasy", "مشاري العفاسي", "https://server7.mp3quran.net/maher/", "Hafs"),
-        Reciter("saad_al_ghamdi", "Saad Al-Ghamdi", "سعد الغامدي", "https://server7.mp3quran.net/s_gmd/", "Hafs")
+        Reciter("abdul_basit", "Abdul Basit", "عبد الباسط عبد الصمد", "https://everyayah.com/data/Abdul_Basit_Murattal_192kbps/", "Hafs"),
+        Reciter("al_hudhaifi", "Al-Hudhaifi", "صالح الهذيفي", "https://everyayah.com/data/Hudhaifi_128kbps/", "Hafs"),
+        Reciter("al_minshawi", "Al-Minshawi", "محمد صديق المنشاوي", "https://everyayah.com/data/Minshawy_Murattal_128kbps/", "Hafs"),
+        Reciter("mishary_alfasy", "Mishary Alafasy", "مشاري العفاسي", "https://everyayah.com/data/Alafasy_128kbps/", "Hafs"),
+        Reciter("saad_al_ghamdi", "Saad Al-Ghamdi", "سعد الغامدي", "https://everyayah.com/data/Ghamadi_40kbps/", "Hafs")
     )
 
     override suspend fun getAllReciters(): List<Reciter> {

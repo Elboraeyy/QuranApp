@@ -20,7 +20,8 @@ data class AppSettings(
     val maghribPreference: AdhanPreference = AdhanPreference.ADHAN,
     val ishaPreference: AdhanPreference = AdhanPreference.ADHAN,
     val totalTasbihCount: Int = 0,
-    val selectedTasbihPhraseId: Int = 1
+    val selectedTasbihPhraseId: Int = 1,
+    val lastReadPage: Int = 1
 )
 
 enum class ThemeMode {

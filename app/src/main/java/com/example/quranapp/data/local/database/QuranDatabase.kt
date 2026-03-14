@@ -12,7 +12,12 @@ import com.example.quranapp.data.local.dao.SettingsDao
 import com.example.quranapp.data.local.dao.SurahDao
 import com.example.quranapp.data.local.dao.TasbihDao
 import com.example.quranapp.data.local.dao.HadithBookmarkDao
+import com.example.quranapp.data.local.dao.ReligiousTaskDao
+import com.example.quranapp.data.local.dao.UserStatsDao
 import com.example.quranapp.data.local.entity.HadithBookmarkEntity
+import com.example.quranapp.data.local.entity.ReligiousTaskEntity
+import com.example.quranapp.data.local.entity.TaskCompletionEntity
+import com.example.quranapp.data.local.entity.UserStatsEntity
 import com.example.quranapp.data.local.entity.AdhkarProgressEntity
 import com.example.quranapp.data.local.entity.AyahEntity
 import com.example.quranapp.data.local.entity.BookmarkEntity
@@ -32,9 +37,12 @@ import com.example.quranapp.data.local.entity.TasbihEntity
         SettingsEntity::class,
         AdhkarProgressEntity::class,
         TasbihEntity::class,
-        HadithBookmarkEntity::class
+        HadithBookmarkEntity::class,
+        ReligiousTaskEntity::class,
+        TaskCompletionEntity::class,
+        UserStatsEntity::class
     ],
-    version = 5,
+    version = 8,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -48,5 +56,7 @@ abstract class QuranDatabase : RoomDatabase() {
     abstract fun adhkarDao(): AdhkarDao
     abstract fun tasbihDao(): TasbihDao
     abstract fun hadithBookmarkDao(): HadithBookmarkDao
+    abstract fun religiousTaskDao(): ReligiousTaskDao
+    abstract fun userStatsDao(): UserStatsDao
 }
 

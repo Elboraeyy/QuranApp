@@ -24,6 +24,12 @@ import com.example.quranapp.domain.repository.AdhkarRepository
 import com.example.quranapp.data.local.dao.HadithBookmarkDao
 import com.example.quranapp.data.local.dao.AdhkarDao
 import com.example.quranapp.data.local.dao.TasbihDao
+import com.example.quranapp.data.local.dao.ReligiousTaskDao
+import com.example.quranapp.data.local.dao.UserStatsDao
+import com.example.quranapp.data.repository.ReligiousTaskRepositoryImpl
+import com.example.quranapp.data.repository.UserStatsRepositoryImpl
+import com.example.quranapp.domain.repository.ReligiousTaskRepository
+import com.example.quranapp.domain.repository.UserStatsRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -108,6 +114,16 @@ object AppModule {
     @Provides
     fun provideTasbihDao(database: QuranDatabase): TasbihDao {
         return database.tasbihDao()
+    }
+
+    @Provides
+    fun provideReligiousTaskDao(database: QuranDatabase): ReligiousTaskDao {
+        return database.religiousTaskDao()
+    }
+
+    @Provides
+    fun provideUserStatsDao(database: QuranDatabase): UserStatsDao {
+        return database.userStatsDao()
     }
 
     @Provides
@@ -261,5 +277,21 @@ object AppModule {
         tasbihDao: TasbihDao
     ): TasbihRepository {
         return TasbihRepositoryImpl(context, tasbihDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideReligiousTaskRepository(
+        religiousTaskDao: ReligiousTaskDao
+    ): ReligiousTaskRepository {
+        return ReligiousTaskRepositoryImpl(religiousTaskDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUserStatsRepository(
+        userStatsDao: UserStatsDao
+    ): UserStatsRepository {
+        return UserStatsRepositoryImpl(userStatsDao)
     }
 }

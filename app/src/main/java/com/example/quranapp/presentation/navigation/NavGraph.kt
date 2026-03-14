@@ -11,7 +11,9 @@ import com.example.quranapp.presentation.ui.screens.AdhkarDetailScreen
 import com.example.quranapp.presentation.ui.screens.AdhkarListScreen
 import com.example.quranapp.presentation.ui.screens.AudioPlayerScreen
 import com.example.quranapp.presentation.ui.screens.BookmarkedHadithsScreen
-import com.example.quranapp.presentation.ui.screens.DailyTasksScreen
+import com.example.quranapp.presentation.ui.screens.ReligiousTasksScreen
+import com.example.quranapp.presentation.ui.screens.TaskHistoryScreen
+import com.example.quranapp.presentation.ui.screens.TaskCustomizationScreen
 import com.example.quranapp.presentation.ui.screens.FavoritesScreen
 import com.example.quranapp.presentation.ui.screens.HadithDetailScreen
 import com.example.quranapp.presentation.ui.screens.HadithListScreen
@@ -88,7 +90,13 @@ fun SetupNavGraph(navController: NavHostController) {
             PrayerTimesScreen(navController = navController)
         }
         composable(Screen.DailyTasks.route) {
-            DailyTasksScreen(navController = navController)
+            ReligiousTasksScreen(navController = navController)
+        }
+        composable(Screen.TaskHistory.route) {
+            TaskHistoryScreen(navController = navController)
+        }
+        composable(Screen.TaskCustomization.route) {
+            TaskCustomizationScreen(navController = navController)
         }
         composable(Screen.Qibla.route) {
             QiblaScreen(navController = navController)

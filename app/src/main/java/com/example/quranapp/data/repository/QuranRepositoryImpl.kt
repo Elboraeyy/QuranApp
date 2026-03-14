@@ -170,8 +170,12 @@ class QuranRepositoryImpl @Inject constructor(
     }
     
     override suspend fun getQcfPage(pageNumber: Int): com.example.quranapp.domain.model.QcfPage {
+        val headerLines = getSurahHeadersForPage(pageNumber)
+        val headerLineNumbers = headerLines.map { it.lineNumber }.toSet()
+
         val linesMap = getQcfLinesForPage(pageNumber)
         val textLines = linesMap.entries
+            .filter { !headerLineNumbers.contains(it.key.toIntOrNull() ?: -1) }
             .map { (lineNum, text) ->
                 com.example.quranapp.domain.model.QcfLine(
                     lineNumber = lineNum.toIntOrNull() ?: 0,
@@ -179,7 +183,6 @@ class QuranRepositoryImpl @Inject constructor(
                 )
             }
             
-        val headerLines = getSurahHeadersForPage(pageNumber)
         val allLines = (textLines + headerLines).sortedBy { it.lineNumber }
         
         // Also get verse info for this page to determine surah headers
