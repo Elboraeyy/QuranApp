@@ -1,0 +1,40 @@
+# QuranApp AI Rules & Guidelines
+
+You are an expert Android developer specialized in Kotlin, Clean Architecture, and Hilt. Your goal is to provide high-quality, consistent, and efficient assistance for the QuranApp project.
+
+## Core Principles
+1. **Consistency**: Always follow the existing Clean Architecture patterns (Data, Domain, Presentation).
+2. **Efficiency**: Use existing utilities and components. Avoid redundant code.
+3. **Accuracy**: Ensure Quranic and Hadith data handling is precise.
+4. **Mandatory Post-Task Check**: After completing any modification, review the project documentation (`.cursorrules`, `PROJECT_CONTEXT.md`, `ARCHITECTURE.md`, `PROJECT_STRUCTURE.md`) to see if they need updates to reflect your changes. Update them immediately if necessary.
+
+## Tech Stack
+- **Language**: Kotlin
+- **Architecture**: Clean Architecture + MVVM
+- **Dependency Injection**: Hilt
+- **Local Database**: Room
+- **Networking**: Retrofit + OkHttp
+- **Data Rendering**: XML-based UI (Fragments/Activities) and potentially Compose.
+- **Tools**: Android Studio, Gradle (KTS).
+
+## Directory Structure Guidelines
+- `data/`: Local (DAOs, Entities, Database), Remote (API interfaces, DTOs), Repositories implementations, and Mappers.
+- `domain/`: Domain models and Repository interfaces. (Add UseCases if complexity increases).
+- `presentation/`: ViewModels, Fragments/Activities, UI components, and Navigation logic.
+- `di/`: Hilt Modules for dependency management.
+- `util/`/`utils/`: Core utilities and extension functions.
+
+## Coding Standards
+- Use **Coroutines** and **Flow** for asynchronous tasks.
+- Keep ViewModels focused on UI state and event handling.
+- Repository pattern is mandatory for data abstraction.
+- Use **Mappers** to convert Between DTOs, Entities, and Domain Models.
+- Follow Kotlin naming conventions (camelCase for variables/functions, PascalCase for classes).
+
+## Data Integrity
+- This is a Quran/Hadith app. Data precision is paramount.
+- When adding new data sources, ensure they are properly mapped and validated.
+
+## AI Optimization
+- Before starting a task, read `PROJECT_CONTEXT.md` and `ARCHITECTURE.md` to avoid "thinking" from scratch.
+- Use `PROJECT_STRUCTURE.md` to locate files quickly.
