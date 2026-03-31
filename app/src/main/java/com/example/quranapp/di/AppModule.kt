@@ -2,34 +2,11 @@ package com.example.quranapp.di
 
 import android.content.Context
 import androidx.room.Room
-import com.example.quranapp.data.local.dao.AyahDao
-import com.example.quranapp.data.local.dao.BookmarkDao
-import com.example.quranapp.data.local.dao.FavoriteDao
-import com.example.quranapp.data.local.dao.ProgressDao
-import com.example.quranapp.data.local.dao.SettingsDao
-import com.example.quranapp.data.local.dao.SurahDao
+import com.example.quranapp.data.local.dao.*
+import com.example.quranapp.data.local.entity.*
 import com.example.quranapp.data.local.database.QuranDatabase
-import com.example.quranapp.data.repository.TranslationRepositoryImpl
-import com.example.quranapp.data.repository.AdhkarRepositoryImpl
-import com.example.quranapp.domain.repository.AudioRepository
-import com.example.quranapp.domain.repository.BookmarkRepository
-import com.example.quranapp.domain.repository.FavoriteRepository
-import com.example.quranapp.domain.repository.PrayerRepository
-import com.example.quranapp.domain.repository.ProgressRepository
-import com.example.quranapp.domain.repository.QuranRepository
-import com.example.quranapp.domain.repository.SettingsRepository
-import com.example.quranapp.domain.repository.TafsirRepository
-import com.example.quranapp.domain.repository.TranslationRepository
-import com.example.quranapp.domain.repository.AdhkarRepository
-import com.example.quranapp.data.local.dao.HadithBookmarkDao
-import com.example.quranapp.data.local.dao.AdhkarDao
-import com.example.quranapp.data.local.dao.TasbihDao
-import com.example.quranapp.data.local.dao.ReligiousTaskDao
-import com.example.quranapp.data.local.dao.UserStatsDao
-import com.example.quranapp.data.repository.ReligiousTaskRepositoryImpl
-import com.example.quranapp.data.repository.UserStatsRepositoryImpl
-import com.example.quranapp.domain.repository.ReligiousTaskRepository
-import com.example.quranapp.domain.repository.UserStatsRepository
+import com.example.quranapp.data.repository.*
+import com.example.quranapp.domain.repository.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -109,6 +86,11 @@ object AppModule {
     @Provides
     fun provideHadithBookmarkDao(database: QuranDatabase): HadithBookmarkDao {
         return database.hadithBookmarkDao()
+    }
+
+    @Provides
+    fun provideHadithDao(database: QuranDatabase): HadithDao {
+        return database.hadithDao()
     }
 
     @Provides
@@ -205,10 +187,18 @@ object AppModule {
     @Provides
     @Singleton
     fun provideAdhkarRepository(
-        @ApplicationContext context: Context,
         adhkarDao: AdhkarDao
     ): AdhkarRepository {
-        return AdhkarRepositoryImpl(context, adhkarDao)
+        return AdhkarRepositoryImpl(adhkarDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideHadithRepository(
+        hadithDao: HadithDao,
+        bookmarkDao: HadithBookmarkDao
+    ): com.example.quranapp.domain.repository.HadithRepository {
+        return com.example.quranapp.data.repository.HadithRepositoryImpl(hadithDao, bookmarkDao)
     }
 
     @Provides
@@ -265,9 +255,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideQiblaTracker(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        locationTracker: LocationTracker
     ): QiblaTracker {
-        return DefaultQiblaTracker(context)
+        return DefaultQiblaTracker(context, locationTracker)
     }
     
     @Provides
@@ -282,9 +273,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideReligiousTaskRepository(
-        religiousTaskDao: ReligiousTaskDao
+        religiousTaskDao: ReligiousTaskDao,
+        userStatsDao: UserStatsDao
     ): ReligiousTaskRepository {
-        return ReligiousTaskRepositoryImpl(religiousTaskDao)
+        return ReligiousTaskRepositoryImpl(religiousTaskDao, userStatsDao)
     }
 
     @Provides

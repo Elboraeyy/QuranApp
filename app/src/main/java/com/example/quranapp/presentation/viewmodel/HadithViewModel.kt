@@ -2,10 +2,10 @@ package com.example.quranapp.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.quranapp.data.repository.HadithRepository
 import com.example.quranapp.domain.model.Hadith
 import com.example.quranapp.domain.model.HadithBook
 import com.example.quranapp.domain.model.HadithCategory
+import com.example.quranapp.domain.repository.HadithRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -69,16 +69,19 @@ class HadithViewModel @Inject constructor(
 
     private fun loadData() {
         viewModelScope.launch {
-            val hadiths = repository.getAllHadiths()
-            val books = repository.getBooks()
-            val categories = repository.getCategories()
+            val books = repository.getAllBooks()
+            val categories = repository.getAllCategories()
             
-            _allHadiths.value = hadiths
             _allBooks.value = books
             _allCategories.value = categories
             
-            if (hadiths.isNotEmpty()) {
-                _currentHadith.value = hadiths.random()
+            // Initially load first category or random if possible
+            if (categories.isNotEmpty()) {
+                val initialHadiths = repository.getHadithsByCategory(categories[0].id)
+                _allHadiths.value = initialHadiths
+                if (initialHadiths.isNotEmpty()) {
+                    _currentHadith.value = initialHadiths.random()
+                }
             }
         }
     }
@@ -86,16 +89,24 @@ class HadithViewModel @Inject constructor(
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
         if (query.isNotBlank()) {
-            _selectedCategoryId.value = null // Clear category filter when searching
-            _selectedBookId.value = null // Clear book filter
+            _selectedCategoryId.value = null 
+            _selectedBookId.value = null
+            
+            // Perform global search via repository
+            viewModelScope.launch {
+                _allHadiths.value = repository.searchHadiths(query)
+            }
         }
     }
 
     fun onCategorySelected(categoryId: Int?) {
         _selectedCategoryId.value = if (_selectedCategoryId.value == categoryId) null else categoryId
         if (categoryId != null) {
-            _searchQuery.value = "" // Clear search when picking a category
-            _selectedBookId.value = null // Clear book filter
+            _searchQuery.value = "" 
+            _selectedBookId.value = null
+            viewModelScope.launch {
+                _allHadiths.value = repository.getHadithsByCategory(categoryId)
+            }
         }
     }
 
@@ -104,6 +115,9 @@ class HadithViewModel @Inject constructor(
         if (bookId != null) {
             _searchQuery.value = ""
             _selectedCategoryId.value = null
+            viewModelScope.launch {
+                _allHadiths.value = repository.getHadithsByBook(bookId)
+            }
         }
     }
 
@@ -117,12 +131,11 @@ class HadithViewModel @Inject constructor(
         }
     }
     
-    // Read the bookmarked items and map them to their corresponding Hadith objects
     val bookmarkedHadiths: StateFlow<List<Hadith>> = combine(
         repository.getAllBookmarksFlow(),
         _allHadiths
     ) { bookmarkEntities, hadiths ->
-        val bookmarkIds = bookmarkEntities.map { it.hadithId }
+        val bookmarkIds = bookmarkEntities.map { entity -> entity.hadithId }
         hadiths.filter { it.id in bookmarkIds }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 }

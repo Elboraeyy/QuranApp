@@ -110,6 +110,7 @@ class AudioPlayerService : Service() {
     override fun onDestroy() {
         notificationManager.setPlayer(null)
         mediaSession.release()
+        audioPlayerManager.release()
         super.onDestroy()
     }
 

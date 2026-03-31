@@ -90,14 +90,31 @@ fun HomeScreen(
         )
     }
 
-    Scaffold { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+        containerColor = Color.Transparent, // Using custom background
+        bottomBar = {
+            BottomNavigationBar(
+                navController = navController,
+                currentRoute = currentRoute
+            )
+        }
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            MaterialTheme.colorScheme.background
+                        )
+                    )
+                )
+                .padding(padding)
+        ) {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(padding),
-                contentPadding = PaddingValues(spacing.gridMargin),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = spacing.large, bottom = 100.dp, start = spacing.gridMargin, end = spacing.gridMargin),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 item {
@@ -124,13 +141,6 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(100.dp)) // Extra space for FAB and bottom bar overlap
                 }
             }
-
-            // Floating Bottom Navigation Bar
-            BottomNavigationBar(
-                navController = navController,
-                currentRoute = currentRoute,
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
         }
     }
 }
@@ -229,152 +239,121 @@ fun TopSection(
 
 @Composable
 fun PrayerTimesCard(prayerTime: PrayerTime?) {
-    // Replicating the sunset/dark gradient from the design
-    val gradientBrush = Brush.verticalGradient(
-        colors = listOf(
-            Color(0xFF2A2118), // Dark brown/black at top
-            Color(0xFF5D3A1A), // Warm brown in middle
-            Color(0xFF2A2118)  // Dark at bottom
-        )
-    )
+    var nextPrayerName = "--"
+    var remainingTime = "--:--"
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-    ) {
-        // Calculate next prayer
-        var nextPrayerName = "--"
-        var nextPrayerTime = "--:--"
-        var remainingTime = "--:--"
+    try {
+        if (prayerTime != null && prayerTime.fajr.isNotEmpty() && !prayerTime.fajr.contains("--")) {
+            val now = LocalTime.now()
+            val formatter = DateTimeFormatter.ofPattern("HH:mm")
 
-        try {
-            if (prayerTime != null && prayerTime.fajr.isNotEmpty() && !prayerTime.fajr.contains("--")) {
-                val now = LocalTime.now()
-                val formatter = DateTimeFormatter.ofPattern("HH:mm")
-
-                // Helper to clean and parse time
-                fun parseTime(timeStr: String): LocalTime {
-                    val cleanTime = timeStr.substringBefore(" ").trim()
-                    return LocalTime.parse(cleanTime, formatter)
-                }
-
-                val prayers = listOf(
-                    "الفجر" to parseTime(prayerTime.fajr),
-                    "الشروق" to parseTime(prayerTime.sunrise),
-                    "الظهر" to parseTime(prayerTime.dhuhr),
-                    "العصر" to parseTime(prayerTime.asr),
-                    "المغرب" to parseTime(prayerTime.maghrib),
-                    "العشاء" to parseTime(prayerTime.isha)
-                )
-
-                val nextPrayer = prayers.firstOrNull { it.second.isAfter(now) }
-                if (nextPrayer != null) {
-                    nextPrayerName = nextPrayer.first
-                    nextPrayerTime = nextPrayer.second.format(formatter)
-
-                    val duration = Duration.between(now, nextPrayer.second)
-                    val hours = duration.toHours()
-                    val minutes = duration.toMinutes() % 60
-                    remainingTime = String.format("%02d:%02d", hours, minutes)
-                } else {
-                    // Next is tomorrow's Fajr
-                    nextPrayerName = "الفجر"
-                    nextPrayerTime = prayers[0].second.format(formatter)
-
-                    // Add 24 hours for tomorrow's time to compute remaining time
-                    var duration = Duration.between(now, prayers[0].second)
-                    if (duration.isNegative) {
-                        duration = duration.plusHours(24)
-                    }
-                    val hours = duration.toHours()
-                    val minutes = duration.toMinutes() % 60
-                    remainingTime = String.format("%02d:%02d", hours, minutes)
-                }
+            fun parseTime(timeStr: String): LocalTime {
+                val cleanTime = timeStr.substringBefore(" ").trim()
+                return LocalTime.parse(cleanTime, formatter)
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
 
-    // Beautiful elegant hero card
+            val prayers = listOf(
+                "الفجر" to parseTime(prayerTime.fajr),
+                "الشروق" to parseTime(prayerTime.sunrise),
+                "الظهر" to parseTime(prayerTime.dhuhr),
+                "العصر" to parseTime(prayerTime.asr),
+                "المغرب" to parseTime(prayerTime.maghrib),
+                "العشاء" to parseTime(prayerTime.isha)
+            )
+
+            val nextPrayer = prayers.firstOrNull { it.second.isAfter(now) }
+            if (nextPrayer != null) {
+                nextPrayerName = nextPrayer.first
+                val duration = Duration.between(now, nextPrayer.second)
+                remainingTime = String.format("%02d:%02d", duration.toHours(), duration.toMinutes() % 60)
+            } else {
+                nextPrayerName = "الفجر"
+                var duration = Duration.between(now, prayers[0].second)
+                if (duration.isNegative) duration = duration.plusHours(24)
+                remainingTime = String.format("%02d:%02d", duration.toHours(), duration.toMinutes() % 60)
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+
     Surface(
-        shape = RoundedCornerShape(32.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp, // Soft elevation
-        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.primary,
+        shadowElevation = 8.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp), // More breathing room
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // "Next Prayer" subtitle
             Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = GreenPrimaryLight.copy(alpha = 0.08f)
+                shape = CircleShape,
+                color = Color.White.copy(alpha = 0.15f)
             ) {
                 Text(
                     text = "الصلاة القادمة",
                     style = MaterialTheme.typography.labelMedium,
-                    color = GreenPrimaryLight,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                 )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // The Main Prayer Time Display (Huge, thin elegant font)
             Text(
                 text = nextPrayerName,
                 style = MaterialTheme.typography.displayMedium,
-                fontWeight = FontWeight.Light,
-                color = MaterialTheme.colorScheme.onSurface,
-                letterSpacing = 2.sp
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
 
-            // Sub-time
             Text(
-                text = "باقي $remainingTime",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
+                text = "متبقي $remainingTime",
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.White.copy(alpha = 0.8f),
+                modifier = Modifier.padding(bottom = 24.dp)
             )
 
-            HorizontalDivider(
-                modifier = Modifier.fillMaxWidth(0.8f),
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.4f)
+                    .height(1.dp)
+                    .background(Color.White.copy(alpha = 0.2f))
             )
+
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Helper to format 24h to 12h
-            fun formatTo12Hour(timeStr: String): String {
-                if (timeStr == "00:00" || timeStr.contains("--")) return timeStr
-                try {
-                    val cleanTime = timeStr.substringBefore(" ").trim()
-                    val time = LocalTime.parse(cleanTime, DateTimeFormatter.ofPattern("HH:mm"))
-                    // Use a simple 12-hour format "hh:mm a"
-                    return time.format(DateTimeFormatter.ofPattern("hh:mm a", java.util.Locale("ar")))
-                } catch (e: Exception) {
-                    return timeStr
-                }
-            }
-
-            // Grid of prayer times at the bottom
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                PrayerTimeColumn("الفجر", formatTo12Hour(prayerTime?.fajr ?: "00:00"), isNext = nextPrayerName == "الفجر")
-                PrayerTimeColumn("الظهر", formatTo12Hour(prayerTime?.dhuhr ?: "00:00"), isNext = nextPrayerName == "الظهر")
-                PrayerTimeColumn("العصر", formatTo12Hour(prayerTime?.asr ?: "00:00"), isNext = nextPrayerName == "العصر")
-                PrayerTimeColumn("المغرب", formatTo12Hour(prayerTime?.maghrib ?: "00:00"), isNext = nextPrayerName == "المغرب")
-                PrayerTimeColumn("العشاء", formatTo12Hour(prayerTime?.isha ?: "00:00"), isNext = nextPrayerName == "العشاء")
+                PrayerSlot("الفجر", prayerTime?.fajr ?: "--:--", isNext = nextPrayerName == "الفجر")
+                PrayerSlot("الظهر", prayerTime?.dhuhr ?: "--:--", isNext = nextPrayerName == "الظهر")
+                PrayerSlot("العصر", prayerTime?.asr ?: "--:--", isNext = nextPrayerName == "العصر")
+                PrayerSlot("المغرب", prayerTime?.maghrib ?: "--:--", isNext = nextPrayerName == "المغرب")
+                PrayerSlot("العشاء", prayerTime?.isha ?: "--:--", isNext = nextPrayerName == "العشاء")
             }
         }
     }
+}
+
+@Composable
+fun PrayerSlot(name: String, time: String, isNext: Boolean) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (isNext) Color.White else Color.White.copy(alpha = 0.5f)
+        )
+        Text(
+            text = time.substringBefore(" "),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (isNext) FontWeight.Bold else FontWeight.Normal,
+            color = Color.White
+        )
     }
 }
 
@@ -741,72 +720,47 @@ fun DrawerMenuItem(icon: androidx.compose.ui.graphics.vector.ImageVector, title:
     }
 }
 
-// Duplicated ToolCard removed from here
-
 @Composable
 fun HadithSection(hadith: com.example.quranapp.domain.model.Hadith?) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        // Section Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "حديث اليوم",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-        }
+        Text(
+            text = "حديث اليوم",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Hadith Card
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(32.dp),
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 8.dp,
-            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                // Top row with quote icon and share
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Icon(
                         imageVector = Icons.Default.FormatQuote,
                         contentDescription = null,
-                        tint = Color(0xFFC9A24D).copy(alpha = 0.5f), // Gold Quote Icon
+                        tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
                         modifier = Modifier.size(40.dp)
                     )
 
                     val context = LocalContext.current
-                    val shareText = "${hadith?.text}\n- ${hadith?.narrator} (${hadith?.source})"
-
-                    Surface(
-                        shape = CircleShape,
-                        color = Color(0xFFC9A24D).copy(alpha = 0.1f),
-                        modifier = Modifier.size(44.dp)
-                    ) {
-                        IconButton(onClick = {
-                            val sendIntent = Intent().apply {
-                                action = Intent.ACTION_SEND
-                                putExtra(Intent.EXTRA_TEXT, shareText)
-                                type = "text/plain"
-                            }
-                            context.startActivity(Intent.createChooser(sendIntent, "مشاركة الحديث"))
-                        }) {
-                            Icon(Icons.Default.Share, contentDescription = "Share", tint = GreenPrimaryLight, modifier = Modifier.size(20.dp))
+                    IconButton(onClick = {
+                        val shareIntent = Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(Intent.EXTRA_TEXT, "${hadith?.text}\n- ${hadith?.narrator}")
+                            type = "text/plain"
                         }
+                        context.startActivity(Intent.createChooser(shareIntent, "مشاركة الحديث"))
+                    }) {
+                        Icon(Icons.Default.Share, null, tint = MaterialTheme.colorScheme.primary)
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // The Hadith Text
                 Text(
                     text = "\"" + (hadith?.text ?: "جاري التحميل...") + "\"",
                     style = MaterialTheme.typography.titleLarge,
@@ -816,28 +770,18 @@ fun HadithSection(hadith: com.example.quranapp.domain.model.Hadith?) {
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                HorizontalDivider(
-                    modifier = Modifier.fillMaxWidth(0.6f).align(Alignment.CenterHorizontally),
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Source Info
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = "الراوي : ${hadith?.narrator ?: "غير متوفر"}",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
-                        color = GreenPrimaryLight
+                        color = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "المصدر : ${hadith?.source ?: ""}",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
                 }
             }

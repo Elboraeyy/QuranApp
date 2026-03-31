@@ -39,7 +39,15 @@ class QuranRepositoryImpl @Inject constructor(
         // Return from memory cache first
         cachedSurahs?.let { return it }
 
-        // Load from local assets file — instant, no network
+        // Load from local database first
+        val dbSurahs = surahDao.getAllSurahsList()
+        if (dbSurahs.isNotEmpty()) {
+            val surahs = dbSurahs.map { it.toDomain() }
+            cachedSurahs = surahs
+            return surahs
+        }
+
+        // Fallback: Load from local assets file — instant, no network (during first launch before initialization finishes if needed)
         val result = try {
             val jsonString = context.assets.open("surahs.json").bufferedReader().use { it.readText() }
             val jsonArray = JSONArray(jsonString)
@@ -78,7 +86,7 @@ class QuranRepositoryImpl @Inject constructor(
         if (localAyahs.isEmpty()) {
             try {
                 val response = quranApi.getSurahDetail(surahNumber)
-                val surahDto = response.data ?: return emptyList()
+                val surahDto = response.data
                 
                 val entities = surahDto.ayahs.map { ayahDto ->
                     AyahEntity(
@@ -143,7 +151,6 @@ class QuranRepositoryImpl @Inject constructor(
                 val juzNumber = obj.getInt("juz")
                 val surahNumber = obj.getInt("surah")
                 val ayahNumber = obj.getInt("ayah")
-                val surah = allSurahs.find { it.number == surahNumber }
                 boundaries.add(
                     Ayah(
                         number = 0,
@@ -251,6 +258,24 @@ class QuranRepositoryImpl @Inject constructor(
     
     private suspend fun getQcfVerses(): List<com.example.quranapp.domain.model.QcfVerse> {
         cachedQcfVerses?.let { return it }
+        
+        // Try to load from database first
+        val dbAyahs = ayahDao.getAllAyahs() 
+        if (dbAyahs.isNotEmpty()) {
+            val verses = dbAyahs.map { ayahEntity ->
+                com.example.quranapp.domain.model.QcfVerse(
+                    id = ayahEntity.number,
+                    surahNumber = ayahEntity.surahNumber,
+                    ayahNumber = ayahEntity.numberInSurah,
+                    codeV1 = ayahEntity.textUthmani,
+                    page = ayahEntity.page
+                )
+            }
+            cachedQcfVerses = verses
+            return verses
+        }
+
+        // Fallback to asset parsing if DB not initialized yet
         val result = try {
             val jsonString = context.assets.open("qcf_quran.json").bufferedReader().use { it.readText() }
             val jsonObject = org.json.JSONObject(jsonString)
@@ -283,7 +308,10 @@ class QuranRepositoryImpl @Inject constructor(
     }
     
     override suspend fun getSurahStartPages(): Map<Int, Int> {
+        // Can be optimized by querying database directly if needed
         val verses = getQcfVerses()
+        if (verses.isEmpty()) return emptyMap()
+        
         val pageMap = mutableMapOf<Int, Int>()
         for (verse in verses) {
             if (verse.ayahNumber == 1 && !pageMap.containsKey(verse.surahNumber)) {

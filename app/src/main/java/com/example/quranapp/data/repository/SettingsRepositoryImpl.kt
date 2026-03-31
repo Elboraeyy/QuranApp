@@ -78,6 +78,11 @@ class SettingsRepositoryImpl @Inject constructor(
         saveSettings(current.copy(lastReadPage = page))
     }
     
+    override suspend fun updateCalculationMethod(method: Int) {
+        val current = getSettings()
+        saveSettings(current.copy(calculationMethod = method))
+    }
+ 
     override suspend fun clearCache() {
         // Implementation for clearing cache
         // This can be extended to clear downloaded files, etc.

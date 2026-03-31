@@ -15,6 +15,7 @@ interface SettingsRepository {
     suspend fun updateSelectedReciter(reciterId: String)
     suspend fun updateAdhanPreference(prayerId: Int, preference: com.example.quranapp.domain.model.AdhanPreference)
     suspend fun updateLastReadPage(page: Int)
+    suspend fun updateCalculationMethod(method: Int)
     suspend fun clearCache()
 }
 

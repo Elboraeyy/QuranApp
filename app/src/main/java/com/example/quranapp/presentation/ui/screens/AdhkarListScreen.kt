@@ -10,7 +10,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Refresh
@@ -18,8 +17,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -29,7 +28,7 @@ import androidx.navigation.NavController
 import com.example.quranapp.presentation.navigation.Screen
 import com.example.quranapp.presentation.ui.theme.spacing
 import com.example.quranapp.presentation.ui.theme.GreenPrimaryLight
-
+import com.example.quranapp.presentation.ui.theme.ScheherazadeNew
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.quranapp.presentation.viewmodel.AdhkarViewModel
 import com.example.quranapp.domain.model.AdhkarCategory
@@ -47,83 +46,74 @@ fun AdhkarListScreen(
     val isLoading by viewModel.isLoading.collectAsState()
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            // Header
+        containerColor = Color.Transparent,
+        topBar = {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = spacing.gridMargin, vertical = 16.dp),
+                    .padding(horizontal = 24.dp, vertical = 24.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back Button (Right in Arabic)
                 Surface(
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.size(40.dp)
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.size(44.dp)
                 ) {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, // Standard Back icon
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
                 Text(
                     text = "الأذكار",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.primary
                 )
 
-                // Refresh/Reset Button (Left in Arabic)
                 Surface(
                     shape = CircleShape,
-                    color = Color(0xFFC9A24D).copy(alpha = 0.1f),
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
                     modifier = Modifier.size(44.dp)
                 ) {
                     IconButton(onClick = { showResetDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Reset Progress",
-                            tint = GreenPrimaryLight
+                            contentDescription = "Reset",
+                            tint = MaterialTheme.colorScheme.secondary
                         )
                     }
                 }
             }
-
-            // Subtitle
-            Text(
-                text = "اختر الذكر المناسب لوقتك، وداوم على ذكر الله في كل حين.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = spacing.gridMargin, vertical = 8.dp)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
+        }
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                            MaterialTheme.colorScheme.background
+                        )
+                    )
+                )
+                .padding(padding)
+        ) {
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = GreenPrimaryLight)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else {
-                // Group Categories
                 val groupedCategories = remember(categories) {
                     categories.groupBy { getMetaCategoryForId(it.id) }
                 }
 
-                // Define preferred order for meta categories
                 val preferredOrder = listOf(
                     "أذكار اليوم والليلة",
                     "أذكار الصلاة",
@@ -141,39 +131,47 @@ fun AdhkarListScreen(
                     "متفرقات وتسابيح"
                 )
 
-                // Sort the groups based on the preferred order
-                val sortedGroups = groupedCategories.entries.sortedBy { entry ->
-                    val index = preferredOrder.indexOf(entry.key)
-                    if (index != -1) index else preferredOrder.size
+                val sortedGroups = remember(groupedCategories) {
+                    groupedCategories.entries.sortedBy { entry ->
+                        val index = preferredOrder.indexOf(entry.key)
+                        if (index != -1) index else preferredOrder.size
+                    }
                 }
 
-                // List of Categories with Sticky Headers
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = spacing.gridMargin),
-                    contentPadding = PaddingValues(bottom = 32.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 32.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    item {
+                        Text(
+                            text = "اختر الذكر المناسب لوقتك، وداوم على ذكر الله في كل حين.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp)
+                        )
+                    }
+
                     sortedGroups.forEach { (metaCategory, sectionCategories) ->
                         stickyHeader {
                             Surface(
-                                color = MaterialTheme.colorScheme.background,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp)
+                                color = MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
                                     text = metaCategory,
-                                    style = MaterialTheme.typography.titleLarge,
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onBackground,
-                                    modifier = Modifier.padding(bottom = 8.dp)
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(vertical = 12.dp)
                                 )
                             }
                         }
 
-                        items(sectionCategories) { category ->
+                        items(sectionCategories, key = { it.id }) { category ->
                             AdhkarCategoryCard(category = category, navController = navController)
                         }
                     }
@@ -196,10 +194,9 @@ fun AdhkarListScreen(
 @Composable
 fun AdhkarCategoryCard(category: AdhkarCategory, navController: NavController) {
     Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 5.dp,
-        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f)),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)),
         modifier = Modifier
             .fillMaxWidth()
             .clickable { navController.navigate(Screen.AdhkarDetail.createRoute(category.id)) }
@@ -208,70 +205,50 @@ fun AdhkarCategoryCard(category: AdhkarCategory, navController: NavController) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Right Side: Progress Circle (Starts on Right in RTL)
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.size(64.dp)
+                modifier = Modifier.size(56.dp)
             ) {
-                // Soft gold background for the progress circle
-                Surface(
-                    shape = CircleShape,
-                    color = Color(0xFFC9A24D).copy(alpha = 0.1f),
-                    modifier = Modifier.fillMaxSize()
-                ) {}
                 CircularProgressIndicator(
-                    progress = { category.progress.toFloat() / category.total.toFloat() },
-                    modifier = Modifier.fillMaxSize(0.85f),
-                    color = GreenPrimaryLight,
-                    trackColor = GreenPrimaryLight.copy(alpha = 0.15f),
+                    progress = { if (category.total > 0) category.progress.toFloat() / category.total.toFloat() else 0f },
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                     strokeWidth = 4.dp
                 )
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "${category.progress}/${category.total}",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = GreenPrimaryLight
-                    )
-                }
+                Text(
+                    text = "${category.progress}",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
 
             Spacer(modifier = Modifier.width(20.dp))
 
-            // Middle: Text Content
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.Start // Right-aligned in RTL
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = category.title,
                     style = MaterialTheme.typography.titleLarge,
-                    fontFamily = com.example.quranapp.presentation.ui.theme.ScheherazadeNew,
+                    fontFamily = ScheherazadeNew,
                     fontWeight = FontWeight.Bold,
-                    color = GreenPrimaryLight
+                    color = MaterialTheme.colorScheme.primary
                 )
-                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = category.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    textAlign = TextAlign.Start,
-                    maxLines = 2,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Left Side: Navigation Arrow (Ends on Left in RTL)
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft, // Points Left in design
-                contentDescription = "Enter",
-                tint = Color(0xFFC9A24D),
-                modifier = Modifier.size(24.dp)
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
             )
         }
     }
@@ -295,17 +272,16 @@ fun AdhkarResetDialog(
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Top Icon
                 Surface(
                     shape = CircleShape,
-                    color = GreenPrimaryLight.copy(alpha = 0.1f),
-                    border = BorderStroke(1.dp, GreenPrimaryLight.copy(alpha = 0.3f)),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
                     modifier = Modifier.size(64.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = null,
-                        tint = GreenPrimaryLight,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(16.dp)
                     )
                 }
@@ -331,12 +307,10 @@ fun AdhkarResetDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Actions
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Cancel (Red outline)
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = Color.Transparent,
@@ -355,10 +329,9 @@ fun AdhkarResetDialog(
                         )
                     }
 
-                    // Confirm (Green fill)
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = GreenPrimaryLight,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .weight(1f)
                             .clickable { onConfirm() }
@@ -377,14 +350,6 @@ fun AdhkarResetDialog(
         }
     }
 }
-
-data class AdhkarCategoryData(
-    val id: Int,
-    val title: String,
-    val description: String,
-    val progress: Int,
-    val total: Int
-)
 
 fun getMetaCategoryForId(id: Int): String {
     return when (id) {

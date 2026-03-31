@@ -7,13 +7,17 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import com.example.quranapp.domain.qibla.QiblaTracker
 import kotlinx.coroutines.channels.awaitClose
+import android.hardware.GeomagneticField
+import com.example.quranapp.domain.location.LocationTracker
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import javax.inject.Inject
-import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.launch
 
 class DefaultQiblaTracker @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val locationTracker: LocationTracker
 ) : QiblaTracker {
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -23,6 +27,11 @@ class DefaultQiblaTracker @Inject constructor(
     override fun startTracking(): Flow<Float> = callbackFlow {
         var lastGravity: FloatArray? = null
         var lastGeomagnetic: FloatArray? = null
+        var currentLocation: android.location.Location? = null
+
+        launch {
+            currentLocation = locationTracker.getCurrentLocation()
+        }
         
         // Smoothing variables
         var currentAzimuth = 0f
@@ -56,6 +65,19 @@ class DefaultQiblaTracker @Inject constructor(
                             
                             currentAzimuth += ALPHA * delta
                             currentAzimuth = (currentAzimuth + 360) % 360
+                        }
+                        
+                        
+                        // Apply Magnetic Declination correction
+                        if (currentLocation != null) {
+                            val geomagneticField = GeomagneticField(
+                                currentLocation!!.latitude.toFloat(),
+                                currentLocation!!.longitude.toFloat(),
+                                currentLocation!!.altitude.toFloat(),
+                                System.currentTimeMillis()
+                            )
+                            azimuthInDegrees += geomagneticField.declination
+                            azimuthInDegrees = (azimuthInDegrees + 360) % 360
                         }
                         
                         trySend(currentAzimuth)

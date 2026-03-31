@@ -9,7 +9,8 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class ReligiousTaskRepositoryImpl @Inject constructor(
-    private val taskDao: ReligiousTaskDao
+    private val taskDao: ReligiousTaskDao,
+    private val userStatsDao: com.example.quranapp.data.local.dao.UserStatsDao
 ) : ReligiousTaskRepository {
     override fun getAllTasks(): Flow<List<ReligiousTaskEntity>> = taskDao.getAllTasks()
 
@@ -24,23 +25,40 @@ class ReligiousTaskRepositoryImpl @Inject constructor(
         taskDao.getCompletionsByDate(date)
 
     override suspend fun toggleCompletion(taskId: Long, date: String, progress: Int) {
+        val task = taskDao.getTaskById(taskId) ?: return
         val existing = taskDao.getCompletion(taskId, date)
+        
         if (existing == null) {
+            // Mark as complete for the first time
             taskDao.insertCompletion(
                 TaskCompletionEntity(
                     taskId = taskId,
                     date = date,
                     isCompleted = true,
-                    currentProgress = progress
+                    currentProgress = progress,
+                    pointsAwarded = task.points
                 )
             )
+            // Award points to user
+            userStatsDao.addPoints(task.points)
         } else {
+            val wasCompleted = existing.isCompleted
+            val newCompleted = !wasCompleted
+            
             taskDao.updateCompletion(
                 existing.copy(
-                    isCompleted = !existing.isCompleted,
-                    currentProgress = if (!existing.isCompleted) progress else 0
+                    isCompleted = newCompleted,
+                    currentProgress = if (newCompleted) progress else 0,
+                    pointsAwarded = if (newCompleted) task.points else 0
                 )
             )
+            
+            // Adjust user points
+            if (newCompleted) {
+                userStatsDao.addPoints(task.points)
+            } else {
+                userStatsDao.addPoints(-task.points) // Deduct points if uncompleted
+            }
         }
     }
 

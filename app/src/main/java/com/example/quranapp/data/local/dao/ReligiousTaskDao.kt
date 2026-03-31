@@ -34,4 +34,7 @@ interface ReligiousTaskDao {
     
     @Query("SELECT COUNT(*) FROM task_completions WHERE isCompleted = 1")
     fun getTotalCompletionsCount(): Flow<Int>
+
+    @Query("SELECT * FROM religious_tasks WHERE id = :id")
+    suspend fun getTaskById(id: Long): ReligiousTaskEntity?
 }

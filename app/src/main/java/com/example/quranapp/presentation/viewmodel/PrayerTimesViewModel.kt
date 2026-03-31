@@ -9,6 +9,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import android.content.Context
 import android.location.Geocoder
 import com.example.quranapp.data.alarm.AdhanAlarmScheduler
+import com.example.quranapp.domain.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -26,6 +27,7 @@ class PrayerTimesViewModel @Inject constructor(
     private val repository: PrayerRepository,
     private val locationTracker: LocationTracker,
     private val alarmScheduler: AdhanAlarmScheduler,
+    private val settingsRepository: SettingsRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -86,6 +88,9 @@ class PrayerTimesViewModel @Inject constructor(
             val lat = location?.latitude ?: 30.0444 // Default Cairo
             val lng = location?.longitude ?: 31.2357 // Default Cairo
             
+            val settings = settingsRepository.getSettings()
+            val method = settings.calculationMethod
+            
             try {
                 val geocoder = Geocoder(context, Locale.getDefault())
                 val addresses = geocoder.getFromLocation(lat, lng, 1)
@@ -99,7 +104,7 @@ class PrayerTimesViewModel @Inject constructor(
                 e.printStackTrace()
             }
 
-            val calendarTimes = repository.getPrayerTimes(lat, lng, 5, month, year)
+            val calendarTimes = repository.getPrayerTimes(lat, lng, method, month, year)
             _prayerTimes.value = calendarTimes.times
             
             if (month == LocalDate.now().monthValue && year == LocalDate.now().year) {
@@ -155,7 +160,7 @@ class PrayerTimesViewModel @Inject constructor(
                     nextTime = pDateTime
                     break
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 continue
             }
         }

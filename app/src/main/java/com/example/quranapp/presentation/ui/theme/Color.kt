@@ -2,16 +2,18 @@ package com.example.quranapp.presentation.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Premium Light Palette
-val GreenPrimaryLight = Color(0xFF134E35) // Deep Elegant Forest Green
-val GoldSecondaryLight = Color(0xFFD4AF37) // Champagne Gold
-val BackgroundLight = Color(0xFFFAF9F6) // Ivory / Off-White (Papyrus feel)
-val SurfaceLight = Color(0xFFFFFFFF) // Pure White for elevated cards
-val TextPrimaryLight = Color(0xFF2C3E35) // Deep Green-Gray instead of harsh black
+// Heartfelt & Warm Light Palette
+val GreenPrimaryLight = Color(0xFF1B4332) // Soulful Forest Green
+val GoldSecondaryLight = Color(0xFFBD9B6D) // Champagne Bronze / Gold
+val BackgroundLight = Color(0xFFFDF7E2) // Warm Vanilla (Heart of the Home)
+val SurfaceLight = Color(0xFFFFFDF5) // Ivory Silk (Soft Sunlight)
+val TextPrimaryLight = Color(0xFF2A1E18) // Deep Espresso instead of harsh gray
+val AccentWarm = Color(0xFFE27D60) // Soft Terracotta for micro-actions
 
-// Premium Dark Palette
-val GreenPrimaryDark = Color(0xFF2A7A55) // Muted Emerald
-val GoldSecondaryDark = Color(0xFFC5A059) // Antique Gold
-val BackgroundDark = Color(0xFF121614) // Deep Charcoal/Onyx
-val SurfaceDark = Color(0xFF1E2521) // Elevated Charcoal
-val TextPrimaryDark = Color(0xFFF0F2F1) // Soft White
+// Heartfelt & Warm Dark Palette (Warm Dark instead of OLED Black)
+val GreenPrimaryDark = Color(0xFF2D5A42) // Mid forest Green
+val GoldSecondaryDark = Color(0xFFA68B5B) // Aged Brass
+val BackgroundDark = Color(0xFF1A1612) // Deep Coffee (Cozy interior)
+val SurfaceDark = Color(0xFF241E18) // Dark Toasted Walnut
+val TextPrimaryDark = Color(0xFFE6DED0) // Warm Parchment
+val AccentWarmDark = Color(0xFFAC3D1A) // Deep Sienna

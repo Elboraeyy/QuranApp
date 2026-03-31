@@ -48,4 +48,8 @@ class SettingsViewModel @Inject constructor(
     fun updateLastReadPage(page: Int) {
         viewModelScope.launch { repository.updateLastReadPage(page) }
     }
+ 
+    fun updateCalculationMethod(method: Int) {
+        viewModelScope.launch { repository.updateCalculationMethod(method) }
+    }
 }

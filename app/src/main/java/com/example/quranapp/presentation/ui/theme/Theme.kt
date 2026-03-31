@@ -20,53 +20,43 @@ import androidx.compose.runtime.MutableState
 private val LightColors = lightColorScheme(
     primary = GreenPrimaryLight,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFE9F0EC), // Very soft sage green
-    onPrimaryContainer = Color(0xFF0C3322),
+    primaryContainer = Color(0xFFF1F7E9), // Soft Creamy Sage
+    onPrimaryContainer = Color(0xFF1B4332),
     
     secondary = GoldSecondaryLight,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFFDFBF5), // Extremely light gold/ivory tint
-    onSecondaryContainer = Color(0xFF5A4A17),
-    
-    tertiary = GreenPrimaryLight,
-    onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFE9F0EC),
-    onTertiaryContainer = Color(0xFF0C3322),
+    secondaryContainer = Color(0xFFFFF9E6), // Warm Buttercream
+    onSecondaryContainer = Color(0xFF8B734B),
     
     background = BackgroundLight,
     onBackground = TextPrimaryLight,
     surface = SurfaceLight,
     onSurface = TextPrimaryLight,
     
-    surfaceVariant = Color(0xFFF1F4F2), // Subtle contrast for cards
-    onSurfaceVariant = Color(0xFF4A5650),
-    outline = Color(0xFFD3DDD8) // Barely visible outline for luxury feel
+    surfaceVariant = Color(0xFFF5F0DA), // Warm Almond Card feel
+    onSurfaceVariant = Color(0xFF4E4034),
+    outline = Color(0xFFE4DFCA) // Antique parchment feel
 )
 
 private val DarkColors = darkColorScheme(
     primary = GreenPrimaryDark,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFF1A402D),
-    onPrimaryContainer = Color(0xFFA6E2C6),
+    primaryContainer = Color(0xFF243B2E),
+    onPrimaryContainer = Color(0xFFBCE6CC),
     
     secondary = GoldSecondaryDark,
     onSecondary = Color.Black,
-    secondaryContainer = Color(0xFF4A3C21),
-    onSecondaryContainer = Color(0xFFFFE0B2),
+    secondaryContainer = Color(0xFF352F24), // Warm Dark Toasted Walnut
+    onSecondaryContainer = Color(0xFFF1E6CF),
     
-    tertiary = GreenPrimaryDark,
-    onTertiary = Color.White,
-    tertiaryContainer = Color(0xFF1A402D),
-    onTertiaryContainer = Color(0xFFA6E2C6),
-
     background = BackgroundDark,
     onBackground = TextPrimaryDark,
     surface = SurfaceDark,
     onSurface = TextPrimaryDark,
     
-    surfaceVariant = Color(0xFF2B332F),
-    onSurfaceVariant = Color(0xFFC0CAC4),
-    outline = Color(0xFF3F4D45) // Soft dark outline
+    surfaceVariant = Color(0xFF2E271F), // Deep Warm Coffee
+    onSurfaceVariant = Color(0xFFDED2C4),
+    outline = Color(0xFF453A2F)
 )
 
 @Composable
@@ -92,6 +82,7 @@ fun QuranAppTheme(
         MaterialTheme(
             colorScheme = colors,
             typography = QuranTypography,
+            shapes = QuranShapes,
             content = content
         )
     }

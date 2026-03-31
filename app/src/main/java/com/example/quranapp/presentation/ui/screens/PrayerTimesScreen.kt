@@ -1,6 +1,7 @@
 package com.example.quranapp.presentation.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -83,25 +84,28 @@ fun PrayerTimesScreen(
     }
 
     Scaffold(
-        containerColor = BackgroundLight
+        containerColor = Color.Transparent,
+        bottomBar = {
+            BottomNavigationBar(
+                navController = navController,
+                currentRoute = Screen.PrayerTimes.route
+            )
+        }
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Background Decorative Gradient
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(GreenPrimaryLight.copy(alpha = 0.05f), BackgroundLight)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            MaterialTheme.colorScheme.background
                         )
                     )
-            )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
+                )
+                .padding(padding)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
                 PremiumPrayerHeader(
                     location = locationName,
                     nextPrayer = nextPrayerName ?: "...",
@@ -111,14 +115,14 @@ fun PrayerTimesScreen(
                 
                 DateNavigator(
                     selectedDate = selectedDate,
-                    onDateSelected = { daysDiff -> viewModel.navigateDate(daysDiff) }
+                    onDateSelected = { viewModel.navigateDate(it) }
                 )
 
                 LazyColumn(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxWidth()
                         .padding(horizontal = 24.dp),
-                    contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(prayers) { prayer ->
@@ -137,12 +141,6 @@ fun PrayerTimesScreen(
                     }
                 }
             }
-            
-            BottomNavigationBar(
-                navController = navController,
-                currentRoute = Screen.PrayerTimes.route,
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
         }
     }
 }
@@ -154,64 +152,51 @@ fun PremiumPrayerHeader(
     timeRemaining: String,
     hijriDate: String
 ) {
-    Box(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(260.dp)
-            .padding(24.dp)
-            .clip(RoundedCornerShape(32.dp))
-            .background(GreenPrimaryLight)
+            .padding(24.dp),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.primary,
+        shadowElevation = 12.dp
     ) {
-        // Decorative elements
-        Icon(
-            Icons.Default.Mosque,
-            null,
-            modifier = Modifier
-                .size(150.dp)
-                .align(Alignment.BottomStart)
-                .offset(x = (-30).dp, y = 30.dp)
-                .graphicsLayer(alpha = 0.1f),
-            tint = Color.White
-        )
+        Box {
+            // Subtle decorative patterns could go here
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    location,
+                    color = Color.White.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.labelMedium
+                )
+                
+                Text(
+                    hijriDate,
+                    color = MaterialTheme.colorScheme.secondary,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                location,
-                color = Color.White.copy(alpha = 0.7f),
-                style = MaterialTheme.typography.labelMedium
-            )
-            
-            Spacer(Modifier.height(8.dp))
-            
-            Text(
-                hijriDate,
-                color = GoldSecondaryLight,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+                Spacer(Modifier.height(32.dp))
 
-            Spacer(Modifier.weight(1f))
+                Text(
+                    "صلاة $nextPrayer القادمة خلال",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontFamily = ScheherazadeNew
+                )
 
-            Text(
-                "موعد صلاة $nextPrayer القادمة",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontFamily = ScheherazadeNew
-            )
-
-            Text(
-                timeRemaining,
-                color = Color.White,
-                style = MaterialTheme.typography.displayMedium,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(Modifier.height(8.dp))
+                Text(
+                    timeRemaining,
+                    color = Color.White,
+                    style = MaterialTheme.typography.displayMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -268,7 +253,7 @@ fun PremiumPrayerCard(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.large, // Organic 32dp
         color = backgroundColor,
         border = BorderStroke(1.dp, borderColor),
         shadowElevation = if (isNext) 8.dp else 2.dp

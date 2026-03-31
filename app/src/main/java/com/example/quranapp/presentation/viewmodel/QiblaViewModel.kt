@@ -11,8 +11,12 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.example.quranapp.domain.location.LocationTracker
 import com.example.quranapp.domain.qibla.QiblaTracker
-import kotlinx.coroutines.flow.catch
-import kotlin.math.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.*
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 @HiltViewModel
 class QiblaViewModel @Inject constructor(
@@ -35,6 +39,8 @@ class QiblaViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private var trackingJob: Job? = null
+
     init {
         fetchLocationAndStartTracking()
     }
@@ -44,7 +50,8 @@ class QiblaViewModel @Inject constructor(
     }
     
     private fun fetchLocationAndStartTracking() {
-        viewModelScope.launch { 
+        trackingJob?.cancel()
+        trackingJob = viewModelScope.launch { 
             _isLoading.value = true
             _error.value = null 
             // 1. Get User Location

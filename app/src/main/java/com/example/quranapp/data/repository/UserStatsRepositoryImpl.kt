@@ -15,6 +15,26 @@ class UserStatsRepositoryImpl @Inject constructor(
     override suspend fun updateStats(stats: UserStatsEntity) =
         userStatsDao.insertOrUpdateStats(stats)
 
-    override suspend fun addXP(points: Int) =
-        userStatsDao.addPoints(points)
+    override suspend fun addXP(points: Int) {
+        val userId = "default_user"
+        val currentStats = userStatsDao.getUserStatsSnapshot(userId) ?: UserStatsEntity(userId)
+        
+        var newXP = currentStats.currentXP + points
+        var newLevel = currentStats.currentLevel
+        val totalPoints = currentStats.totalPoints + points
+        
+        while (newXP >= (newLevel * 1000).toLong()) {
+            newXP -= (newLevel * 1000).toLong()
+            newLevel++
+        }
+        
+        userStatsDao.insertOrUpdateStats(
+            currentStats.copy(
+                totalPoints = totalPoints,
+                currentLevel = newLevel,
+                currentXP = newXP,
+                nextLevelXP = (newLevel * 1000).toLong()
+            )
+        )
+    }
 }

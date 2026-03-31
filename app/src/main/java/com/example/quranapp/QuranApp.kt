@@ -17,14 +17,17 @@ class QuranApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // Removed mock data insertion: initializeDatabase()
+        initializeDatabase()
     }
 
     private fun initializeDatabase() {
         CoroutineScope(Dispatchers.IO).launch {
             DatabaseInitializer(
+                this@QuranApp,
                 database.surahDao(),
-                database.ayahDao()
+                database.ayahDao(),
+                database.adhkarDao(),
+                database.hadithDao()
             ).initializeDatabase()
         }
     }

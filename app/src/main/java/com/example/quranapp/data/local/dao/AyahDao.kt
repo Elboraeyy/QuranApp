@@ -28,6 +28,9 @@ interface AyahDao {
     @Query("SELECT * FROM ayahs WHERE text LIKE '%' || :query || '%' OR textUthmani LIKE '%' || :query || '%'")
     suspend fun searchAyat(query: String): List<AyahEntity>
     
+    @Query("SELECT * FROM ayahs")
+    suspend fun getAllAyahs(): List<AyahEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAyat(ayahs: List<AyahEntity>)
     
